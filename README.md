@@ -3,6 +3,8 @@
 Pick your apps on one web page, download one file, and let it set up a new computer for you.
 Crescent works on **Windows** and **Mac**.
 
+**Try it:** https://crescent-installer.pages.dev
+
 ![The Crescent page](docs/screenshots/page-main.png)
 
 ## How it works
