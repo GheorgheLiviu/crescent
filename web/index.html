@@ -1420,7 +1420,7 @@ async function downloadMac() {
 // the plain program, "the agent"), which listens on 127.0.0.1. This page sends it the list and shows
 // the progress it reports. Without the agent nothing answers, and the page offers it for download.
 const AGENT = "http://127.0.0.1:47615";
-const AGENT_VERSION = 5; // agentVersion in installer/agent.go
+const AGENT_VERSION = 6; // agentVersion in installer/agent.go
 const inst = $("#instDlg");
 let instRun = null; // { token, phase: "wait" | "run" | "end" }
 const agentFetch = (path, body) => fetch(AGENT + path, {

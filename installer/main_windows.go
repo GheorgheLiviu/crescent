@@ -30,12 +30,13 @@ var (
 	mbIconQuestion = uintptr(0x00000020)
 	mbIconInfo     = uintptr(0x00000040)
 	idYes          = uintptr(6)
+	mbOnTop        = uintptr(0x00050000) // MB_TOPMOST | MB_SETFOREGROUND, so the box isn't hidden behind the browser
 )
 
 func msgBox(text string, flags uintptr) uintptr {
 	t, _ := syscall.UTF16PtrFromString(text)
 	c, _ := syscall.UTF16PtrFromString("Crescent")
-	r, _, _ := procMessageBox.Call(0, uintptr(unsafe.Pointer(t)), uintptr(unsafe.Pointer(c)), flags)
+	r, _, _ := procMessageBox.Call(0, uintptr(unsafe.Pointer(t)), uintptr(unsafe.Pointer(c)), flags|mbOnTop)
 	return r
 }
 
