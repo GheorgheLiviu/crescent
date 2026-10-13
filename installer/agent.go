@@ -36,11 +36,11 @@ func linkToken(link string) string {
 
 // agentVersion goes up with every change to the agent; the page (AGENT_VERSION in web/index.html)
 // sends a newer program to an older agent, which replaces itself for the next Install.
-const agentVersion = 4
+const agentVersion = 5
 
 // agentOrigins are the pages that may drive the agent.
-// shortcut: only the local page (setup.cmd) for now, add the real site once it's hosted.
-var agentOrigins = map[string]bool{"http://localhost:8765": true, "http://127.0.0.1:8765": true}
+// The local page (setup.cmd) and the hosted site on Cloudflare Pages.
+var agentOrigins = map[string]bool{"http://localhost:8765": true, "http://127.0.0.1:8765": true, "https://crescent-installer.pages.dev": true}
 
 // agentState is what GET /state returns; the page redraws its installing screen from it.
 type agentState struct {

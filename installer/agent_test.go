@@ -43,6 +43,9 @@ func TestAgentGuardsAndRuns(t *testing.T) {
 	if w := do("OPTIONS", "/start", page, "", ""); w.Code != http.StatusNoContent || w.Header().Get("Access-Control-Allow-Private-Network") != "true" {
 		t.Fatalf("preflight: %d %v", w.Code, w.Header())
 	}
+	if w := do("OPTIONS", "/start", "https://crescent-installer.pages.dev", "", ""); w.Code != http.StatusNoContent {
+		t.Fatalf("hosted site preflight: %d", w.Code)
+	}
 	if w := do("POST", "/start", page, tok, `{"apps":[{"id":"bad id"}]}`); w.Code != http.StatusBadRequest {
 		t.Fatalf("no valid apps: %d", w.Code)
 	}
