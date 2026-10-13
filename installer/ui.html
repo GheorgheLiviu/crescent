@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Crescent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Same tokens as the Crescent page, so the installer window looks like the site. */
+:root {
+  --bg: #f4f3fa; --surface: #ffffff; --surface-2: #f9f8fd; --line: #e2e0f0; --line-strong: #c7c4e0;
+  --fg: #17153a; --muted: #5f5c86; --accent: #6b3fc4; --accent-hover: #5a32aa; --accent-fg: #ffffff;
+  --accent-soft: #efe7fc; --ok: #1f7a55; --warn: #a1560b; --warn-soft: #fcf1e3; --bad: #b3261e; --bad-soft: #fbe9e7;
+  --top: #1c1030; --top-fg: #efeefc; --top-muted: #a5a3d0; --brand: #f6cf6b; --star: #9b6fe0; --moon: #c99bff;
+  --log-bg: #1c1030; --log-fg: #dcd9f5;
+  --tile-s: 58%; --tile-bg: 93%; --tile-fg: 30%;
+  --font-ui: "Instrument Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #120d1c; --surface: #1c1529; --surface-2: #171122; --line: #2f2542; --line-strong: #463860;
+    --fg: #f1ecfa; --muted: #a99bc2; --accent: #c99bff; --accent-hover: #d9b6ff; --accent-fg: #1d0c33;
+    --accent-soft: #2e2142; --ok: #86d9a6; --warn: #f0a35e; --warn-soft: #33221a; --bad: #ff8a80; --bad-soft: #3a1714;
+    --top: #0b0713; --top-fg: #f1ecfa; --top-muted: #9a8bb5; --brand: #f5d27e; --star: #e6d9ff; --moon: #f5d27e;
+    --log-bg: #0b0713; --log-fg: #d6cbe8;
+    --tile-s: 38%; --tile-bg: 21%; --tile-fg: 78%;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 400 14px/1.5 var(--font-ui); display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); user-select: none; overflow: hidden; }
+button { font: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { background: radial-gradient(1.2px 1.2px at 30% 30%, #fff9, transparent), radial-gradient(1px 1px at 52% 70%, #fff7, transparent), radial-gradient(1.4px 1.4px at 68% 25%, #fffa, transparent), radial-gradient(1px 1px at 86% 65%, #fff6, transparent), var(--top); color: var(--top-fg); display: flex; align-items: center; gap: 10px; padding: 12px 22px; }
+.top b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.top span { margin-left: auto; font-size: 12px; color: var(--top-muted); }
+
+main { padding: 22px 22px 12px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
+h1 { margin: 0; font-size: 22px; line-height: 1.2; letter-spacing: -.02em; font-weight: 700; }
+.lede { margin: 4px 0 0; color: var(--muted); }
+
+.meter { display: grid; gap: 6px; }
+.meter[hidden] { display: none; }
+.meter-row { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.meter-row b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meter-row span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.track { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.fill { height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), var(--moon)); transition: width .4s ease; }
+
+/* The black cat hugging the moon: in the top bar, and big next to the title. It breathes and its tail
+   sways; while installing the moon glows brighter, and when everything is done it hops and the stars sparkle. */
+.top .logo { color: #fff; }
+.title-row { display: flex; align-items: flex-start; gap: 16px; }
+.title-row > div { flex: 1; min-width: 0; }
+.art { flex: none; margin: -8px -4px -10px 0; color: var(--star); animation: float 6s ease-in-out infinite; }
+
+[data-phase="running"] .art .glow, [data-phase="running"] .art .chin { animation-duration: 1.6s; }
+[data-phase="done"] .art { animation: hop .8s cubic-bezier(.3, 1.6, .5, 1) 2, float 6s ease-in-out 1.6s infinite; }
+[data-phase="done"] .art .stars circle { animation-duration: 1s; }
+.logo .tail { transform-box: view-box; transform-origin: 50px 64px; animation: sway 3.6s ease-in-out infinite; }
+.logo .cat, .logo .paws { transform-box: view-box; transform-origin: 32px 58px; animation: breathe 4s ease-in-out infinite; }
+.logo .glow, .logo .chin { animation: glow 4s ease-in-out infinite; }
+.logo .stars circle { animation: twinkle 2.8s ease-in-out infinite; }
+.logo .stars circle:nth-child(2) { animation-delay: -.9s; }
+.logo .stars circle:nth-child(3) { animation-delay: -1.8s; }
+@keyframes sway { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-6deg); } }
+@keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025, .985); } }
+@keyframes glow { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+@keyframes twinkle { 0%, 100% { opacity: 1; } 50% { opacity: .2; } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes hop { 30% { transform: translateY(-14px) rotate(-6deg); } 60% { transform: translateY(2px); } }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: auto; min-height: 0; flex: 1 1 0; }
+
+.where { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 10px; }
+.where-h { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.where-h .lbl { font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-right: auto; }
+.seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface-2); }
+.seg button { border: 0; background: none; color: var(--muted); font-weight: 600; font-size: 12.5px; padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-fg); }
+.where-b { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 13px; color: var(--muted); }
+.where-b svg { flex: none; color: var(--accent); }
+.where-b .path { font: 500 12.5px/1.4 var(--font-mono); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.where-b .link { flex: none; }
+.hint { font-size: 12.5px; color: var(--muted); margin: -4px 0 0; }
+.hint.err { color: var(--bad); font-weight: 500; }
+
+/* Optional scripts that run after the apps, one row each. The list scrolls when there are many, and the box
+   shrinks before the app list does, so the window never overflows. */
+main.tight { gap: 12px; }
+.scripts { display: flex; flex-direction: column; gap: 6px; min-height: 0; min-width: 0; flex: 0 1 auto; }
+#scripts:not([hidden]) ~ .panel { min-height: 100px; } /* keep two apps in view */
+#scripts.viewing ~ .panel { min-height: 52px; } /* and one while a script's text is open */
+.scripts.viewing .slist li:not(.viewing) { display: none; } /* only the open script's row, so its text gets the room */
+.where-h .count { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slist { list-style: none; margin: 0 -6px; padding: 0; flex: 0 1 auto; min-height: 31px; max-height: 132px; overflow: auto; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.slist.more { -webkit-mask-image: linear-gradient(#000 calc(100% - 26px), transparent); mask-image: linear-gradient(#000 calc(100% - 26px), transparent); } /* more rows below */
+.slist li { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 3px 6px; border-radius: 6px; }
+.slist li + li { box-shadow: inset 0 1px var(--line); }
+.slist li.viewing { background: var(--accent-soft); box-shadow: none; }
+.chk { display: flex; align-items: center; gap: 10px; min-width: 0; margin-right: auto; cursor: pointer; }
+.chk input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.chk .path { font: 500 12.5px/1.4 var(--font-mono); color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.slist .kind { flex: none; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.slist .link { flex: none; padding: 2px 0; min-width: 32px; text-align: right; }
+.slist li.off .path, .slist li.off .kind { opacity: .55; }
+.code { margin: 0; flex: 0 1 auto; min-height: 44px; min-width: 0; max-height: 140px; overflow: auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--fg); font: 400 11.5px/1.55 var(--font-mono); white-space: pre; tab-size: 4; user-select: text; }
+.apps { list-style: none; margin: 0; padding: 4px 0; }
+.apps li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 14px; }
+.meta { display: grid; min-width: 0; }
+.dest { font-size: 12px; line-height: 1.45; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dest.path { font: 400 11.5px/1.45 var(--font-mono); }
+.dest.custom { color: var(--accent); }
+.act { display: flex; align-items: center; gap: 12px; }
+.apps li + li { border-top: 1px solid var(--line); }
+.tile { --h: 150; width: 30px; height: 30px; border-radius: 8px; display: grid; place-content: center; font: 600 12px/1 var(--font-ui); background: hsl(var(--h) var(--tile-s) var(--tile-bg)); color: hsl(var(--h) var(--tile-s) var(--tile-fg)); }
+.tile.icon { background: none; object-fit: contain; border-radius: 0; }
+.nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st { font-size: 12px; font-weight: 600; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.st.running, .st.waiting { color: var(--accent); }
+.st.installed, .st.finished { color: var(--ok); }
+.sicon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-content: center; background: var(--accent-soft); color: var(--accent); }
+.st.failed { color: var(--bad); }
+.spin { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-soft); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+li.running, li.waiting { background: var(--accent-soft); }
+
+.log { margin: 0; padding: 12px 14px; background: var(--log-bg); color: var(--log-fg); font: 400 11.5px/1.55 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; min-height: 100%; }
+
+.summary { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 12.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.chip.ok { background: var(--accent-soft); border-color: transparent; color: var(--ok); }
+.chip.bad { background: var(--bad-soft); border-color: transparent; color: var(--bad); }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.notes li { font-size: 13px; color: var(--muted); padding-left: 14px; position: relative; overflow-wrap: anywhere; user-select: text; }
+.notes li::before { content: ""; position: absolute; left: 0; top: .6em; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.notes:empty { display: none; }
+.notes li.bad { color: var(--bad); font-weight: 500; }
+.notes li.bad::before { background: var(--bad); }
+
+footer { display: flex; align-items: center; gap: 10px; padding: 14px 22px 18px; border-top: 1px solid var(--line); background: var(--surface-2); }
+footer .opt { font-size: 12.5px; color: var(--muted); margin-right: auto; display: flex; align-items: center; gap: 6px; }
+footer .opt i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.btn { border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--fg); padding: 8px 16px; font-weight: 600; font-size: 13px; cursor: pointer; min-width: 92px; }
+.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--accent-fg); }
+.btn:disabled { opacity: .5; cursor: default; }
+.link { background: none; border: 0; color: var(--accent); font-weight: 600; font-size: 12.5px; cursor: pointer; padding: 4px 0; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .fill { transition: none; } .spin { animation-duration: 3s; } .logo, .logo * { animation: none !important; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <svg class="logo" width="24" height="24" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="lg1k"><rect width="64" height="64" rx="15"/></clipPath><radialGradient id="lg1b" cx=".5" cy=".2" r=".9"><stop offset="0" stop-color="#4a2b78"/><stop offset="1" stop-color="#160c26"/></radialGradient><radialGradient id="lg1f" cx=".38" cy=".22" r=".95"><stop offset="0" stop-color="#5d5270"/><stop offset=".55" stop-color="#2e2639"/><stop offset="1" stop-color="#15111c"/></radialGradient><radialGradient id="lg1m" cx=".3" cy=".35" r=".9"><stop offset="0" stop-color="#fffef4"/><stop offset=".6" stop-color="#fbe7ad"/><stop offset="1" stop-color="#f0bd5c"/></radialGradient><radialGradient id="lg1g"><stop offset="0" stop-color="#ffc867" stop-opacity=".8"/><stop offset=".5" stop-color="#ffb347" stop-opacity=".3"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient><radialGradient id="lg1e" cx=".5" cy=".8" r=".8"><stop offset="0" stop-color="#e88aa8"/><stop offset="1" stop-color="#7a4466"/></radialGradient><linearGradient id="lg1s" x1="0" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient></defs><g clip-path="url(#lg1k)"><rect width="64" height="64" fill="url(#lg1b)"/><g class="stars" fill="currentColor"><circle cx="4.5" cy="8" r=".9"/><circle cx="32" cy="4" r=".8"/><circle cx="59.5" cy="7" r="1"/></g><g class="cat"><path d="M5 25 9.5 3.8c.4-1.8 2.2-2.3 3.4-1L26 12z" fill="url(#lg1f)"/><path d="M59 25 54.5 3.8c-.4-1.8-2.2-2.3-3.4-1L38 12z" fill="url(#lg1f)"/><path d="M9.5 18 12.2 7.5 20.5 13zM54.5 18 51.8 7.5 43.5 13z" fill="url(#lg1e)" opacity=".85"/><path d="M32 9c15 0 25.5 8.5 27.5 22 1.5 10 1.5 20 1.5 35H3c0-15 0-25 1.5-35C6.5 17.5 17 9 32 9z" fill="url(#lg1f)"/><path d="M8 27C10 16.5 19.5 10.6 32 10.6S54 16.5 56 27" fill="none" stroke="#c9b5ff" stroke-opacity=".14" stroke-width="1.3" stroke-linecap="round"/><ellipse cx="25" cy="16.5" rx="9" ry="3.6" fill="#fff" opacity=".09"/><g class="tail"><path d="M47 66C60 63 63 50 59.5 41.5 57.5 36.5 52.5 36 52.5 40.5" fill="none" stroke="url(#lg1f)" stroke-width="7.5" stroke-linecap="round"/><path d="M47 66C60 63 63 50 59.5 41.5 57.5 36.5 52.5 36 52.5 40.5" fill="none" stroke="#c9b5ff" stroke-opacity=".16" stroke-width="1.4" stroke-linecap="round" transform="translate(-1.6 -.8)"/></g><g fill="none" stroke="#efe6ff" stroke-width="2" stroke-linecap="round"><path d="M17.5 26.5q3.6-3.4 7.2 0M39.3 26.5q3.6-3.4 7.2 0"/></g><path d="M30.7 29.2h2.6l-1.3 1.5z" fill="#e88aa8"/><path d="M29.4 31.3q1.3 1.4 2.6 0 1.3 1.4 2.6 0" fill="none" stroke="#efe6ff" stroke-width="1.1" stroke-linecap="round"/><g fill="#ff8fb0" opacity=".5"><ellipse cx="15" cy="31" rx="4" ry="2.3"/><ellipse cx="49" cy="31" rx="4" ry="2.3"/></g><g stroke="#d8ccef" stroke-opacity=".35" stroke-width=".6" stroke-linecap="round"><path d="M10 29.5 3 28.5M10 32 3.5 33.5M54 29.5l7-1M54 32l6.5 1.5"/></g></g><rect width="64" height="64" fill="url(#lg1s)"/><circle class="glow" cx="30" cy="46" r="17" fill="url(#lg1g)"/><ellipse class="chin" cx="31" cy="35.5" rx="13" ry="3.2" fill="url(#lg1g)"/><path class="moon" d="M29.01 34.54A12.5 12.5 0 1 0 41.87 50.91A10.6 10.6 0 1 1 29.01 34.54Z" fill="url(#lg1m)"/><path d="M29.01 34.54A12.5 12.5 0 1 0 41.87 50.91A10.6 10.6 0 1 1 29.01 34.54Z" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".6"/><g class="paws"><ellipse cx="19.5" cy="44" rx="5.4" ry="4.2" fill="url(#lg1f)"/><path d="M17.9 45.2v1.6M21.1 45.2v1.6" stroke="#0d0a14" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"/><ellipse cx="18.5" cy="42.4" rx="2.6" ry="1.2" fill="#fff" opacity=".12"/><ellipse cx="38.5" cy="55" rx="5.4" ry="4.2" fill="url(#lg1f)"/><path d="M36.9 56.2v1.6M40.1 56.2v1.6" stroke="#0d0a14" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"/><ellipse cx="37.5" cy="53.4" rx="2.6" ry="1.2" fill="#fff" opacity=".12"/></g></g></svg>
+  <b>Crescent</b>
+  <span>Windows Package Manager</span>
+</header>
+
+<main>
+  <div class="title-row">
+    <div>
+      <h1 id="title">Ready to install</h1>
+      <p class="lede" id="lede"></p>
+    </div>
+    <svg class="logo art" width="72" height="72" viewBox="0 0 64 64" aria-hidden="true"><defs><clipPath id="lg2k"><rect width="64" height="64" rx="15"/></clipPath><radialGradient id="lg2b" cx=".5" cy=".2" r=".9"><stop offset="0" stop-color="#4a2b78"/><stop offset="1" stop-color="#160c26"/></radialGradient><radialGradient id="lg2f" cx=".38" cy=".22" r=".95"><stop offset="0" stop-color="#5d5270"/><stop offset=".55" stop-color="#2e2639"/><stop offset="1" stop-color="#15111c"/></radialGradient><radialGradient id="lg2m" cx=".3" cy=".35" r=".9"><stop offset="0" stop-color="#fffef4"/><stop offset=".6" stop-color="#fbe7ad"/><stop offset="1" stop-color="#f0bd5c"/></radialGradient><radialGradient id="lg2g"><stop offset="0" stop-color="#ffc867" stop-opacity=".8"/><stop offset=".5" stop-color="#ffb347" stop-opacity=".3"/><stop offset="1" stop-color="#ffb347" stop-opacity="0"/></radialGradient><radialGradient id="lg2e" cx=".5" cy=".8" r=".8"><stop offset="0" stop-color="#e88aa8"/><stop offset="1" stop-color="#7a4466"/></radialGradient><linearGradient id="lg2s" x1="0" y1="0" x2="0" y2="1"><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient></defs><g clip-path="url(#lg2k)"><rect width="64" height="64" fill="url(#lg2b)"/><g class="stars" fill="currentColor"><circle cx="4.5" cy="8" r=".9"/><circle cx="32" cy="4" r=".8"/><circle cx="59.5" cy="7" r="1"/></g><g class="cat"><path d="M5 25 9.5 3.8c.4-1.8 2.2-2.3 3.4-1L26 12z" fill="url(#lg2f)"/><path d="M59 25 54.5 3.8c-.4-1.8-2.2-2.3-3.4-1L38 12z" fill="url(#lg2f)"/><path d="M9.5 18 12.2 7.5 20.5 13zM54.5 18 51.8 7.5 43.5 13z" fill="url(#lg2e)" opacity=".85"/><path d="M32 9c15 0 25.5 8.5 27.5 22 1.5 10 1.5 20 1.5 35H3c0-15 0-25 1.5-35C6.5 17.5 17 9 32 9z" fill="url(#lg2f)"/><path d="M8 27C10 16.5 19.5 10.6 32 10.6S54 16.5 56 27" fill="none" stroke="#c9b5ff" stroke-opacity=".14" stroke-width="1.3" stroke-linecap="round"/><ellipse cx="25" cy="16.5" rx="9" ry="3.6" fill="#fff" opacity=".09"/><g class="tail"><path d="M47 66C60 63 63 50 59.5 41.5 57.5 36.5 52.5 36 52.5 40.5" fill="none" stroke="url(#lg2f)" stroke-width="7.5" stroke-linecap="round"/><path d="M47 66C60 63 63 50 59.5 41.5 57.5 36.5 52.5 36 52.5 40.5" fill="none" stroke="#c9b5ff" stroke-opacity=".16" stroke-width="1.4" stroke-linecap="round" transform="translate(-1.6 -.8)"/></g><g fill="none" stroke="#efe6ff" stroke-width="2" stroke-linecap="round"><path d="M17.5 26.5q3.6-3.4 7.2 0M39.3 26.5q3.6-3.4 7.2 0"/></g><path d="M30.7 29.2h2.6l-1.3 1.5z" fill="#e88aa8"/><path d="M29.4 31.3q1.3 1.4 2.6 0 1.3 1.4 2.6 0" fill="none" stroke="#efe6ff" stroke-width="1.1" stroke-linecap="round"/><g fill="#ff8fb0" opacity=".5"><ellipse cx="15" cy="31" rx="4" ry="2.3"/><ellipse cx="49" cy="31" rx="4" ry="2.3"/></g><g stroke="#d8ccef" stroke-opacity=".35" stroke-width=".6" stroke-linecap="round"><path d="M10 29.5 3 28.5M10 32 3.5 33.5M54 29.5l7-1M54 32l6.5 1.5"/></g></g><rect width="64" height="64" fill="url(#lg2s)"/><circle class="glow" cx="30" cy="46" r="17" fill="url(#lg2g)"/><ellipse class="chin" cx="31" cy="35.5" rx="13" ry="3.2" fill="url(#lg2g)"/><path class="moon" d="M29.01 34.54A12.5 12.5 0 1 0 41.87 50.91A10.6 10.6 0 1 1 29.01 34.54Z" fill="url(#lg2m)"/><path d="M29.01 34.54A12.5 12.5 0 1 0 41.87 50.91A10.6 10.6 0 1 1 29.01 34.54Z" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".6"/><g class="paws"><ellipse cx="19.5" cy="44" rx="5.4" ry="4.2" fill="url(#lg2f)"/><path d="M17.9 45.2v1.6M21.1 45.2v1.6" stroke="#0d0a14" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"/><ellipse cx="18.5" cy="42.4" rx="2.6" ry="1.2" fill="#fff" opacity=".12"/><ellipse cx="38.5" cy="55" rx="5.4" ry="4.2" fill="url(#lg2f)"/><path d="M36.9 56.2v1.6M40.1 56.2v1.6" stroke="#0d0a14" stroke-opacity=".6" stroke-width=".8" stroke-linecap="round"/><ellipse cx="37.5" cy="53.4" rx="2.6" ry="1.2" fill="#fff" opacity=".12"/></g></g></svg>
+  </div>
+
+  <section class="where" id="where" aria-label="Install location">
+    <div class="where-h">
+      <span class="lbl">Install location</span>
+      <div class="seg" role="radiogroup" aria-label="Install location">
+        <button type="button" role="radio" data-mode="default" aria-checked="true">Windows default</button>
+        <button type="button" role="radio" data-mode="folder" aria-checked="false">One folder for all</button>
+      </div>
+    </div>
+    <div class="where-b" id="whereBody"></div>
+    <p class="hint" id="whereHint" hidden></p>
+  </section>
+
+  <section class="where scripts" id="scripts" aria-label="After installing" hidden>
+    <div class="where-h">
+      <span class="lbl">After installing</span>
+      <span class="count" id="scriptsCount"></span>
+    </div>
+    <ul class="slist" id="slist"></ul>
+    <pre class="code" id="scriptCode" hidden tabindex="0" aria-label="Script"></pre>
+    <p class="hint" id="scriptsHint"></p>
+  </section>
+
+  <div class="meter" id="meter" hidden>
+    <div class="meter-row"><b id="status">Preparing</b><span id="pct">0%</span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+  </div>
+
+  <div class="panel" id="panel">
+    <div id="done" hidden style="padding:16px 16px 14px; border-bottom:1px solid var(--line); display:grid; gap:14px">
+      <div class="summary" id="summary"></div>
+      <ul class="notes" id="notes"></ul>
+    </div>
+    <ul class="apps" id="apps"></ul>
+    <pre class="log" id="log" hidden></pre>
+  </div>
+</main>
+
+<footer>
+  <span class="opt" id="opt"></span>
+  <button class="link" id="toggleLog" type="button" hidden>Show details</button>
+  <button class="btn" id="cancel" type="button">Cancel</button>
+  <button class="btn" id="runScriptsBtn" type="button" hidden>Run scripts</button>
+  <button class="btn primary" id="primary" type="button">Install</button>
+</footer>
+
+<script>
+const data = window.AI || { apps: [{ id: "Google.Chrome", name: "Google Chrome" }, { id: "7zip.7zip", name: "7-Zip" }], autoUpdate: true,
+  scripts: [
+    { name: "dark-mode.ps1", kind: "ps1", lines: 3, body: "# Switches Windows and apps to dark mode\nSet-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name AppsUseLightTheme -Value 0 -Type DWord\nSet-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name SystemUsesLightTheme -Value 0 -Type DWord" },
+    { name: "setup.cmd", kind: "cmd", lines: 2, body: "@echo off\ngit config --global init.defaultBranch main" },
+  ] };
+// On the Mac this page runs in a browser tab, scripts run in the background and Homebrew installs.
+const MAC = !!data.mac, PC = MAC ? "Mac" : "PC";
+const OWN_WINDOW = MAC ? "" : " in its own window";
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function hue(id) { let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) % 360; return h; }
+function initials(n) {
+  const w = n.replace(/\(.*?\)/g, "").split(/[\s.\-]+/).filter(Boolean);
+  return (w.length > 1 ? w[0][0] + w[1][0] : w[0].slice(0, 2)).replace(/^./, c => c.toUpperCase());
+}
+const LABEL = { queued: "Queued", running: "Installing", waiting: "Your turn", installed: "Installed", skipped: "Already installed", failed: "Failed", cancelled: "Cancelled" };
+const states = data.apps.map(() => "queued");
+let phase = "ready";
+
+// Install location. Each app goes to its usual place, or to its own folder inside the folder chosen
+// for all apps or for that app. The Go side ignores folders for apps marked fixed.
+const FIXED_NOTE = "This app's setup doesn't let you choose a folder, so it installs to its usual place.";
+const NOT_ALLOWED = /[<>:"/\\|?*\x00-\x1f]/g;
+let mode = "default", allFolder = "", picking = null, pickError = "";
+const own = data.apps.map(() => "");
+const validFolder = p => p.length <= 200 && /^[A-Za-z]:(\\[^\\/:*?"<>|\x00-\x1f]+)+$/.test(p) &&
+  p.slice(3).split("\\").every(part => part.replace(/^[. ]+$/, "") !== "" && !/[. ]$/.test(part) && !part.startsWith(" "));
+function folderName(a) {
+  const clean = s => s.replace(NOT_ALLOWED, " ").replace(/\s+/g, " ").trim().replace(/[. ]+$/, "");
+  return clean(a.name) || clean(a.id) || "App";
+}
+// A whole drive (D:\) becomes D:\Program Files, the way Windows lays out C:.
+function baseFolder(p) {
+  p = p.replace(/[\\/]+$/, "");
+  return /^[A-Za-z]:$/.test(p) ? p + "\\Program Files" : p;
+}
+function dest(i) {
+  const a = data.apps[i], base = a.fixed ? "" : own[i] || (mode === "folder" ? allFolder : "");
+  if (!base) return "";
+  const name = folderName(a), p = base.split("\\").pop().toLowerCase() === name.toLowerCase() ? base : base + "\\" + name;
+  return validFolder(p) ? p : "";
+}
+function pick(target) {
+  if (!window.aiPickFolder || picking !== null) return;
+  picking = target;
+  const a = target === "all" ? null : data.apps[target];
+  const start = a ? own[target] || (mode === "folder" ? allFolder : "") : allFolder;
+  window.aiPickFolder(a ? `Choose where to install ${a.name}` : "Choose a folder for all apps", start);
+}
+
+const FOLDER_ICON = `<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.75 4.25c0-.83.67-1.5 1.5-1.5h3l1.5 1.5h5c.83 0 1.5.67 1.5 1.5v6c0 .83-.67 1.5-1.5 1.5h-9.5c-.83 0-1.5-.67-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
+function renderWhere() {
+  $$(".seg button").forEach(b => b.setAttribute("aria-checked", b.dataset.mode === mode));
+  const fixed = data.apps.filter(a => a.fixed).length;
+  if (mode === "folder") {
+    $("#whereBody").innerHTML = `${FOLDER_ICON}<span class="path" title="${esc(allFolder)}">${esc(allFolder)}</span><button class="link" type="button" id="whereChange">Change…</button>`;
+  } else {
+    $("#whereBody").innerHTML = `<span>Apps go where Windows normally puts them, usually C:\\Program Files.</span>`;
+  }
+  const hint = mode === "folder" ? ["Each app gets its own folder inside it."] : [];
+  if (fixed) hint.push(`${fixed === data.apps.length ? (fixed === 1 ? "This app" : "These apps") : fixed === 1 ? "1 app" : fixed + " apps"} can only use the usual place.`);
+  if (mode === "default" && fixed < data.apps.length) hint.push("Use Change on an app to give it its own folder.");
+  $("#whereHint").textContent = pickError || hint.join(" ");
+  $("#whereHint").classList.toggle("err", !!pickError);
+  $("#whereHint").hidden = !pickError && !hint.length;
+}
+
+function renderApps() {
+  const ready = phase === "ready";
+  $("#apps").innerHTML = data.apps.map((a, i) => {
+    const s = states[i], d = dest(i);
+    const [where, cls] = a.manual ? ["You choose in its own setup", ""] : a.fixed ? ["Usual place only", ""] : d ? [d, own[i] ? "path custom" : "path"] : ["Usual place", ""];
+    const act = !ready ? `<span class="st ${s}">${s === "running" ? '<span class="spin"></span>' : ""}${LABEL[s]}</span>` : a.fixed ? "" :
+      `<span class="act">${own[i] ? `<button class="link" type="button" data-reset="${i}" aria-label="Use the default folder for ${esc(a.name)}">Reset</button>` : ""}` +
+      `<button class="link" type="button" data-pick="${i}" aria-label="Choose a folder for ${esc(a.name)}">Change</button></span>`;
+    return `<li class="${s}">${a.icon ? `<img class="tile icon" src="${esc(a.icon)}" alt="">` : `<span class="tile" style="--h:${hue(a.id)}">${esc(initials(a.name))}</span>`}` +
+      `<span class="meta"><span class="nm">${esc(a.name)}</span><span class="dest ${cls}" title="${esc(a.fixed && !a.manual ? FIXED_NOTE : where)}">${esc(where)}</span></span>${act}</li>`;
+  }).join("") + (ready ? "" : scriptRows());
+}
+
+// After Install, each ticked script gets a row under the apps; scripts started later from the last
+// screen's "Run scripts" get one when they start. sState[i] is "" while the script has no row.
+const SLABEL = { queued: "Queued", running: "Running", finished: "Finished", failed: "Failed", skipped: "Skipped" };
+const ICON_SCRIPT = `<svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true"><rect x="1.25" y="2.75" width="15.5" height="12.5" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="m4.75 7 2.25 2-2.25 2M9 11.25h4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+let sState = [], sNote = [];
+function scriptRows() {
+  return scripts.map((s, i) => {
+    const st = sState[i]; if (!st) return "";
+    const sub = sNote[i] || `${KIND[s.kind] || "PowerShell"} script`;
+    return `<li class="${st}" data-script-row="${i}"><span class="sicon" aria-hidden="true">${ICON_SCRIPT}</span>` +
+      `<span class="meta"><span class="nm">${esc(s.name)}</span><span class="dest" title="${esc(sub)}">${esc(sub)}</span></span>` +
+      `<span class="st ${st}">${st === "running" ? '<span class="spin"></span>' : ""}${SLABEL[st]}</span></li>`;
+  }).join("");
+}
+
+const n = data.apps.length;
+const manual = data.apps.filter(a => a.manual).map(a => a.name);
+if (MAC) $("header.top span").textContent = "Homebrew";
+$("#lede").textContent = `Crescent will install ${n} ${n === 1 ? "app" : "apps"} on this ${PC}. You can keep using your ${PC} while it works.` +
+  (manual.length ? ` At the end, ${manual.join(" and ")} ${manual.length === 1 ? "opens its" : "open their"} own setup for you to click through.` : "");
+$("#opt").innerHTML = data.autoUpdate ? "<i></i>Weekly updates will be turned on" : "";
+$("#where").hidden = data.apps.every(a => a.fixed); // nothing here can move
+renderWhere();
+renderApps();
+
+// The scripts picked on the website, run after the apps in this order. Each can be switched off here, and
+// the ones that didn't run can still be started from the last screen. Indexes match the Go side's list.
+const KIND = { cmd: "Command Prompt", sh: "Shell" };
+const scripts = (Array.isArray(data.scripts) ? data.scripts : []).map(s => {
+  s = s && typeof s === "object" ? s : {};
+  const body = typeof s.body === "string" ? s.body : "", kind = s.kind === "cmd" || s.kind === "sh" ? s.kind : "ps1";
+  const lines = s.lines > 0 ? Math.floor(s.lines) : body.replace(/\r\n?/g, "\n").replace(/\n+$/, "").split("\n").length;
+  return { name: String(s.name || "script." + kind), kind, body, lines };
+});
+const ran = scripts.map(() => false);
+let scriptRunning = false, viewing = -1, runAsked = false;
+const runChoices = () => $$("#slist [data-run]").map(c => c.checked);
+function renderScripts() {
+  const on = runChoices(), count = on.filter(Boolean).length, one = scripts.length === 1;
+  $$("#slist li").forEach((li, i) => li.classList.toggle("off", !on[i]));
+  $("#scriptsCount").textContent = one ? (count ? "On" : "Off") : `${count} of ${scripts.length} on`;
+  $("#scriptsHint").textContent = count === 0 ? (one ? "It won't run now. You can still start it when the apps are done." :
+      "None will run now. You can still start them when the apps are done.") :
+    MAC ? (one ? "Runs after the apps are installed. Its output is under Show details." :
+      "Run one after another after the apps are installed. Their output is under Show details.") :
+    one ? "Runs as administrator in its own window after the apps are installed." :
+    "Run as administrator, one after another, each in its own window, after the apps are installed.";
+}
+function view(i) {
+  viewing = viewing === i ? -1 : i;
+  $$("#slist [data-view]").forEach(b => {
+    const open = +b.dataset.view === viewing, name = scripts[+b.dataset.view].name;
+    b.textContent = open ? "Hide" : "View";
+    b.setAttribute("aria-expanded", open);
+    b.setAttribute("aria-label", `${open ? "Hide" : "View"} ${name}`);
+    b.closest("li").classList.toggle("viewing", open);
+  });
+  $("#scriptCode").hidden = viewing < 0;
+  $("#scriptCode").textContent = viewing < 0 ? "" : scripts[viewing].body;
+  $("#scriptCode").setAttribute("aria-label", viewing < 0 ? "Script" : scripts[viewing].name);
+  $("#scriptCode").scrollTop = 0;
+  $("#scripts").classList.toggle("viewing", viewing >= 0);
+  if (viewing < 0) $$("#slist li")[i].scrollIntoView({ block: "nearest" }); // back where it was in the list
+  moreBelow();
+}
+// Fades the bottom of the list while more scripts are hidden below.
+function moreBelow() { const l = $("#slist"); l.classList.toggle("more", l.scrollTop + l.clientHeight < l.scrollHeight - 1); }
+if (scripts.length) {
+  $("#slist").innerHTML = scripts.map((s, i) =>
+    `<li><label class="chk"><input type="checkbox" data-run="${i}" checked><span class="path" title="${esc(s.name)}">${esc(s.name)}</span></label>` +
+    `<span class="kind">${KIND[s.kind] || "PowerShell"} · ${s.lines} ${s.lines === 1 ? "line" : "lines"}</span>` +
+    `<button class="link" type="button" data-view="${i}" aria-expanded="false" aria-controls="scriptCode" aria-label="View ${esc(s.name)}">View</button></li>`).join("");
+  $("#scripts").hidden = false;
+  $("main").classList.add("tight");
+  renderScripts();
+}
+$("#slist").addEventListener("change", renderScripts);
+$("#slist").addEventListener("scroll", moreBelow);
+if (window.ResizeObserver) new ResizeObserver(moreBelow).observe($("#slist"));
+$("#slist").addEventListener("click", e => { const b = e.target.closest("[data-view]"); if (b) view(+b.dataset.view); });
+// The notes line for one script on the last screen: "Running…", then how it went.
+function scriptNote(i) {
+  let li = $(`#notes li[data-script="${i}"]`);
+  if (!li) { li = document.createElement("li"); li.dataset.script = i; $("#notes").append(li); }
+  return li;
+}
+$("#runScriptsBtn").addEventListener("click", () => {
+  if (phase !== "done" || runAsked) return;
+  runAsked = true; // Go runs them only once
+  $("#runScriptsBtn").disabled = true;
+  window.aiRunScripts && window.aiRunScripts();
+});
+
+$(".seg").addEventListener("click", e => {
+  const b = e.target.closest("[data-mode]"); if (!b || phase !== "ready") return;
+  pickError = "";
+  if (b.dataset.mode === "folder" && !allFolder) { pick("all"); return; }
+  mode = b.dataset.mode; renderWhere(); renderApps();
+});
+$("#where").addEventListener("click", e => { if (e.target.closest("#whereChange")) pick("all"); });
+$("#apps").addEventListener("click", e => {
+  if (phase !== "ready") return;
+  const p = e.target.closest("[data-pick]"), r = e.target.closest("[data-reset]");
+  if (p) pick(+p.dataset.pick);
+  if (r) { own[+r.dataset.reset] = ""; pickError = ""; renderWhere(); renderApps(); }
+});
+
+function showLog(on) {
+  $("#log").hidden = !on;
+  $("#apps").hidden = on;
+  $("#done").hidden = on || phase !== "done";
+  $("#toggleLog").textContent = on ? "Hide details" : "Show details";
+}
+
+$("#primary").addEventListener("click", () => {
+  if (phase === "ready") {
+    phase = "running";
+    document.body.dataset.phase = phase;
+    const locations = data.apps.map((a, i) => dest(i));
+    const runScripts = scripts.length ? runChoices() : [], on = runScripts.filter(Boolean).length;
+    runScripts.forEach((run, i) => { if (run) sState[i] = "queued"; });
+    $("#where").hidden = true;
+    $("#scripts").hidden = true;
+    $("main").classList.remove("tight");
+    renderApps();
+    $("#title").textContent = "Installing your apps";
+    $("#lede").textContent = `This can take a while for large apps. Don't turn off your ${PC}.` +
+      (on === 1 ? " Your script runs when they're done." : on ? " Your scripts run when they're done." : "");
+    $("#meter").hidden = false;
+    $("#primary").hidden = true;
+    $("#toggleLog").hidden = false;
+    // go-webview2 needs every argument, so runScripts is always passed.
+    window.aiStart && window.aiStart(locations, runScripts);
+  } else if (phase === "done") {
+    window.aiClose && window.aiClose();
+  }
+});
+$("#cancel").addEventListener("click", () => {
+  if (phase === "ready") { window.aiClose && window.aiClose(); return; }
+  $("#cancel").disabled = true;
+  const open = data.apps.find((a, i) => states[i] === "waiting");
+  $("#status").textContent = scriptRunning ? (MAC ? "Stopping when your script finishes" : "Stopping when your script's window closes") :
+    open ? `Stopping when you close the ${open.name} setup window` : "Stopping after the current step";
+  window.aiCancel && window.aiCancel();
+});
+$("#toggleLog").addEventListener("click", () => showLog($("#log").hidden));
+
+// Called from the Go side
+window.ui = {
+  // The folder the user chose in Windows' folder picker, or "" if they cancelled.
+  picked(path) {
+    const target = picking; picking = null;
+    if (!path || target === null || phase !== "ready") return;
+    const base = baseFolder(path);
+    if (!validFolder(base)) {
+      pickError = "Choose a folder on one of this PC's drives, such as C: or D:.";
+    } else {
+      pickError = "";
+      if (target === "all") { allFolder = base; mode = "folder"; } else own[target] = base;
+    }
+    renderWhere(); renderApps();
+  },
+  progress(done, total, status) {
+    for (let i = 0; i < done; i++) if (states[i] === "queued" || states[i] === "running") states[i] = states[i] === "running" ? "installed" : states[i];
+    if (done < total) states[done] = "running";
+    const pct = Math.round(done / total * 100);
+    $("#fill").style.width = pct + "%";
+    $("#pct").textContent = pct + "%";
+    if (status) $("#status").textContent = status;
+    renderApps();
+    const row = $("#apps li.running, #apps li.waiting"); if (row) row.scrollIntoView({ block: "nearest" });
+  },
+  outcome(i, s) {
+    states[i] = s; renderApps();
+    const row = $("#apps li.waiting"); if (row) row.scrollIntoView({ block: "nearest" });
+  },
+  log(line) {
+    const el = $("#log");
+    el.textContent += line + "\n";
+    if (!el.hidden) el.scrollTop = el.scrollHeight;
+  },
+  done(r) {
+    phase = "done";
+    document.body.dataset.phase = phase;
+    const bad = r.failed.length > 0;
+    $("#title").textContent = r.cancelled ? "Installation stopped" : bad ? "Finished, with some problems" : "All set";
+    $("#lede").textContent = r.cancelled ? "The remaining apps weren't installed. Run the installer again to finish." :
+      bad ? "Most apps are ready. The ones that failed can be installed again by running this installer." :
+      "Your apps are installed and ready to use.";
+    $("#fill").style.width = "100%"; $("#pct").textContent = "100%";
+    $("#status").textContent = "Done";
+    states.forEach((s, i) => { if (s === "queued" || s === "running" || s === "waiting") states[i] = "cancelled"; });
+    sState.forEach((s, i) => { if (s === "queued" || s === "running") sState[i] = "skipped"; }); // Cancel skipped them
+    renderApps();
+    $("#summary").innerHTML = `<span class="chip ok">${r.installed} installed</span><span class="chip">${r.skipped} already installed</span>` +
+      `<span class="chip ${bad ? "bad" : ""}">${r.failed.length} failed</span>`;
+    const notes = [...(bad ? ["Failed: " + r.failed.join(", ")] : []), ...r.notes];
+    $("#notes").innerHTML = notes.map(t => `<li>${esc(t)}</li>`).join("");
+    $("#cancel").hidden = true;
+    scriptRunning = false;
+    // Scripts that were switched off (or skipped because of Cancel) can still be run from here.
+    scripts.forEach((s, i) => { ran[i] = !!(Array.isArray(r.scriptsRan) && r.scriptsRan[i]); });
+    const left = ran.filter(x => !x).length;
+    $("#runScriptsBtn").hidden = !left || runAsked;
+    $("#runScriptsBtn").disabled = runAsked; $("#runScriptsBtn").textContent = left === 1 ? "Run script" : "Run scripts";
+    $("#primary").hidden = false; $("#primary").textContent = "Finish"; $("#primary").focus();
+    $("#opt").innerHTML = "";
+    showLog(false);
+    $("#panel").scrollTop = 0;
+  },
+  // Script i opened in its own window: at the end of installing, or from the Run scripts button.
+  scriptStarted(i) {
+    const s = Number.isInteger(i) ? scripts[i] : null; if (!s) return;
+    scriptRunning = true;
+    sState[i] = "running"; sNote[i] = ""; renderApps();
+    const row = $(`#apps [data-script-row="${i}"]`); if (row) row.scrollIntoView({ block: "nearest" });
+    if (phase === "running") {
+      $("#status").textContent = $("#cancel").disabled ? (MAC ? "Stopping when your script finishes" : "Stopping when your script's window closes") :
+        scripts.length === 1 ? `Running your script ${s.name}` : `Running script ${i + 1} of ${scripts.length}: ${s.name}`;
+      $("#lede").textContent = MAC ? "Your script is running. Crescent continues when it finishes." :
+        "Your script is running in its own window. Crescent continues when it closes.";
+      $("#fill").style.width = "100%"; $("#pct").textContent = "100%";
+    } else if (phase === "done") {
+      $("#runScriptsBtn").disabled = true; $("#runScriptsBtn").textContent = "Running…";
+      const li = scriptNote(i);
+      li.classList.remove("bad");
+      li.textContent = `Running ${s.name}${OWN_WINDOW}…`;
+      if (!$("#done").hidden) li.scrollIntoView({ block: "nearest" });
+    }
+  },
+  // r.note says how script r.index went, r.ok is false if it failed. While installing, the note
+  // comes again in done's notes, so it only shows here on the last screen.
+  scriptFinished(r) {
+    scriptRunning = false;
+    const i = r && Number.isInteger(r.index) ? r.index : -1, s = scripts[i]; if (!s) return;
+    ran[i] = true;
+    sState[i] = r.ok ? "finished" : "failed"; sNote[i] = r.note ? String(r.note) : ""; renderApps();
+    if (phase !== "done") return;
+    const li = scriptNote(i);
+    li.textContent = r.note ? String(r.note) : r.ok ? `Your script ${s.name} finished.` : `Your script ${s.name} didn't finish.`;
+    li.classList.toggle("bad", !r.ok);
+    if (!$("#done").hidden) li.scrollIntoView({ block: "nearest" });
+  },
+  // Every script the Run scripts button started has finished.
+  scriptsDone() {
+    scriptRunning = false;
+    $("#runScriptsBtn").hidden = true;
+    if (phase === "done") $("#primary").focus();
+  },
+};
+</script>
+</body>
+</html>

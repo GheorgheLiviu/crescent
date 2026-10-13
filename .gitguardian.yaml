@@ -1,0 +1,6 @@
+version: 2
+secret:
+  ignored_matches:
+    # web/apps.js maps the 1Password app to its Homebrew package; the name isn't a password.
+    - name: Homebrew package name for 1Password
+      match: cask:1password

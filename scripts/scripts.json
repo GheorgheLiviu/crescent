@@ -1,0 +1,46 @@
+[
+  {
+    "id": "show-file-extensions",
+    "name": "Show file extensions",
+    "description": "Shows file extensions like .pdf and .exe, and hidden files, in File Explorer (Finder on a Mac).",
+    "ro": {
+      "name": "Afișează extensiile fișierelor",
+      "description": "Afișează extensii precum .pdf și .exe, și fișierele ascunse, în File Explorer (Finder pe Mac)."
+    },
+    "windows": "windows/show-file-extensions.ps1",
+    "mac": "mac/show-file-extensions.sh"
+  },
+  {
+    "id": "dark-mode",
+    "name": "Dark mode",
+    "description": "Switches the system and apps to dark mode.",
+    "ro": {
+      "name": "Mod întunecat",
+      "description": "Trece sistemul și aplicațiile în modul întunecat."
+    },
+    "windows": "windows/dark-mode.ps1",
+    "mac": "mac/dark-mode.sh"
+  },
+  {
+    "id": "monthly-printer-test",
+    "name": "Monthly printer test page",
+    "description": "Prints a colour test page on the 1st of every month, so the ink or toner doesn't dry out. It finds the printer by itself each time.",
+    "ro": {
+      "name": "Pagină de test lunară la imprimantă",
+      "description": "Tipărește o pagină de test color pe 1 ale fiecărei luni, ca să nu se usuce cerneala sau tonerul. Găsește singur imprimanta de fiecare dată."
+    },
+    "windows": "windows/monthly-printer-test.ps1",
+    "mac": null
+  },
+  {
+    "id": "install-rea",
+    "name": "Install REA (AI reverse engineering)",
+    "description": "Installs REA from rea.tools, which lets AI agents such as Claude take apart apps and programs. Needs Node.js LTS ticked. Connect it to your agent afterwards with: npx rea-agents setup",
+    "ro": {
+      "name": "Instalează REA (reverse engineering cu AI)",
+      "description": "Instalează REA de pe rea.tools, care le permite agenților AI precum Claude să analizeze aplicații și programe. Are nevoie de Node.js LTS bifat. După aceea îl conectezi la agent cu: npx rea-agents setup"
+    },
+    "windows": "windows/install-rea.ps1",
+    "mac": "mac/install-rea.sh"
+  }
+]
