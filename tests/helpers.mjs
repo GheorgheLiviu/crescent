@@ -19,7 +19,7 @@ export async function open(browser, file, { colorScheme = "light", width = 1280,
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-  await page.route(/fonts\.(googleapis|gstatic)/, r => r.abort());
+  await page.route(/fonts\.(googleapis|gstatic)|cloudflareinsights/, r => r.abort());
   if (init) await page.addInitScript(init, arg);
   await page.goto(pathToFileURL(path.join(ROOT, file)).href);
   page.errors = errors;
