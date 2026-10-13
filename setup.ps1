@@ -40,7 +40,7 @@ if ($Dev) {
   Pop-Location
   $sh = Join-Path (Split-Path (Split-Path (Get-Command git).Source)) "bin\sh.exe"
   & $sh tests/run.sh; Check "The tests"
-  Write-Host "Setup done. To rebuild the installer after changing installer/, see README, Build the installer."
+  Write-Host "Setup done. To rebuild the installer after changing installer/, see docs/DEVELOPING.md, Build the installer."
 }
 
 $url = "http://localhost:$Port/"

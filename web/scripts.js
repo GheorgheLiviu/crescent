@@ -71,5 +71,24 @@ window.SCRIPT_LIBRARY = [
    "kind": "sh",
    "body": "# Installs REA (rea.tools), the reverse-engineering tools for AI agents, with npm.\n# Needs Node.js 22 or newer: tick Node.js LTS on the page. Safe to run twice (it updates REA).\n\n# Homebrew's node@22 is not linked into bin, so add its folder too.\nexport PATH=\"/opt/homebrew/opt/node@22/bin:/usr/local/opt/node@22/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\"\nif ! command -v npm >/dev/null; then\n  echo 'Node.js is not installed, so REA was not. Tick Node.js LTS and run this again.'\n  exit 1\nfi\n\n# Install into the user's folder, so it needs no administrator password.\nnpm install --global --prefix \"$HOME/.npm-global\" rea-agents || exit $?\necho \"REA is installed in ~/.npm-global/bin. To connect it to Claude, Cursor or another agent, run: npx rea-agents setup\"\n"
   }
+ },
+ {
+  "id": "install-ghidra",
+  "name": "Install Ghidra (reverse engineering)",
+  "description": "Installs Ghidra, the free reverse engineering tool from the NSA, which takes apart programs to show how they work. Also installs the Java it needs.",
+  "ro": {
+   "name": "Instalează Ghidra (reverse engineering)",
+   "description": "Instalează Ghidra, unealta gratuită de reverse engineering de la NSA, care desface programele ca să vezi cum funcționează. Instalează și Java de care are nevoie."
+  },
+  "windows": {
+   "name": "install-ghidra.ps1",
+   "kind": "ps1",
+   "body": "# Installs Ghidra (ghidra-sre.org), the NSA's reverse engineering tool, from its GitHub releases.\n# Ghidra has no winget package: it ships as a zip, so this unpacks it into Program Files and adds\n# a Start menu shortcut. It needs Java 21 or newer and installs Temurin 21 if none is found.\n# Safe to run twice (it replaces Ghidra with the latest version).\n$ErrorActionPreference = 'Stop'\n$ProgressPreference = 'SilentlyContinue'\n\n# Java installed a moment ago isn't on this window's PATH yet, so look in its usual folders too.\n$jdks = Get-ChildItem \"$env:ProgramFiles\\Eclipse Adoptium\", \"$env:ProgramFiles\\Java\", \"$env:ProgramFiles\\Microsoft\" -Directory -Filter 'jdk-*' -ErrorAction SilentlyContinue |\n    Where-Object { $_.Name -match '^jdk-(\\d+)' -and [int]$Matches[1] -ge 21 }\nif (-not $jdks) {\n    Write-Host 'Installing Java 21 (Temurin), which Ghidra needs...'\n    winget install --id EclipseAdoptium.Temurin.21.JDK --exact --silent --accept-package-agreements --accept-source-agreements\n}\n\n$release = Invoke-RestMethod 'https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest'\n$asset = $release.assets | Where-Object { $_.name -like 'ghidra_*_PUBLIC_*.zip' } | Select-Object -First 1\nif (-not $asset) { Write-Host 'Could not find the Ghidra download.'; exit 1 }\n\nWrite-Host \"Downloading $($asset.name)...\"\n$zip = Join-Path $env:TEMP $asset.name\n$tmp = Join-Path $env:TEMP 'ghidra-unpack'\nInvoke-WebRequest $asset.browser_download_url -OutFile $zip\nRemove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue\nExpand-Archive $zip $tmp\n$dest = \"$env:ProgramFiles\\Ghidra\"\nRemove-Item $dest -Recurse -Force -ErrorAction SilentlyContinue\n# The zip holds one folder, ghidra_<version>_PUBLIC.\nMove-Item (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName $dest\nRemove-Item $zip, $tmp -Recurse -Force\n\n$shell = New-Object -ComObject WScript.Shell\n$link = $shell.CreateShortcut(\"$env:ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Ghidra.lnk\")\n$link.TargetPath = \"$dest\\ghidraRun.bat\"\n$link.WorkingDirectory = $dest\n$link.IconLocation = \"$dest\\support\\ghidra.ico\"\n$link.WindowStyle = 7  # minimized, so the launcher's console window stays out of the way\n$link.Save()\nWrite-Host \"Ghidra $($release.tag_name) is installed. Open it from the Start menu.\"\n"
+  },
+  "mac": {
+   "name": "install-ghidra.sh",
+   "kind": "sh",
+   "body": "# Installs Ghidra (ghidra-sre.org), the NSA's reverse engineering tool, with Homebrew.\n# Homebrew also installs the Java it needs. Safe to run twice.\n\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\nif ! command -v brew >/dev/null; then\n  echo 'Homebrew is not installed, so Ghidra was not.'\n  exit 1\nfi\n\nbrew install --cask ghidra || exit $?\necho 'Ghidra is installed. Run it with: ghidraRun'\n"
+  }
  }
 ];

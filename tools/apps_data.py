@@ -8,7 +8,7 @@ import json, os
 PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "apps.js")
 PREFIX = "window.CRESCENT_APPS = "
 HEADER = """// The apps the Crescent page offers. Edit this file to add, remove or rename apps; after the
-// "=" it is plain JSON (double quotes, no comma after the last item). See README "Add an app".
+// "=" it is plain JSON (double quotes, no comma after the last item). See docs/DEVELOPING.md "Add an app".
 //   groups:        the list on the page, in order. "ro" is the Romanian name (optional for apps).
 //                  Word, Excel, PowerPoint, Outlook, OneNote and Access use the IDs Microsoft.Office/Word and so on.
 //   templates:     the "Start from a template" cards: names, descriptions, tile colour (hue 0-359)

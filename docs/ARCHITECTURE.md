@@ -1,6 +1,6 @@
 # How Crescent fits together
 
-Back to [README.md](../README.md). How to build and test: [README.md](../README.md).
+Back to [README.md](../README.md). How to build and test: [DEVELOPING.md](DEVELOPING.md).
 
 ## The big picture
 

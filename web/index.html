@@ -28,11 +28,13 @@
   --ok-soft: #e3f3ea;
   --warn: #a1560b;
   --warn-soft: #fcf1e3;
-  --top: #1c1030;
-  --top-fg: #efeefc;
-  --top-muted: #a5a3d0;
-  --top-field: #232057;
-  --top-line: #36337a;
+  --top: #ffffff;
+  --top-fg: #17153a;
+  --top-muted: #5f5c86;
+  --top-field: #f4f3fa;
+  --top-line: #e2e0f0;
+  --logo-a: #f3ecff;
+  --logo-b: #c4a8f0;
   --brand: #f6cf6b;
   --star: #9b6fe0;
   --tile-s: 58%;
@@ -47,7 +49,7 @@
   --bg: #120d1c; --surface: #1c1529; --surface-2: #171122; --line: #2f2542; --line-strong: #463860;
   --fg: #f1ecfa; --muted: #a99bc2; --accent: #c99bff; --accent-hover: #d9b6ff; --accent-fg: #1d0c33;
   --accent-soft: #2e2142; --ok: #86d9a6; --ok-soft: #16302a; --warn: #f0a35e; --warn-soft: #33221a;
-  --top: #0b0713; --top-fg: #f1ecfa; --top-muted: #9a8bb5; --top-field: #1f1630; --top-line: #33274a; --brand: #f5d27e; --star: #e6d9ff;
+  --top: #0b0713; --top-fg: #f1ecfa; --top-muted: #9a8bb5; --top-field: #1f1630; --top-line: #33274a; --logo-a: #4a2b78; --logo-b: #160c26; --brand: #f5d27e; --star: #e6d9ff;
   --tile-s: 38%; --tile-bg: 21%; --tile-fg: 78%;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4); color-scheme: dark;
 }
@@ -82,7 +84,12 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
 :root { --sky: radial-gradient(1.2px 1.2px at 12% 30%, #fff9, transparent), radial-gradient(1px 1px at 31% 72%, #fff7, transparent),
   radial-gradient(1.4px 1.4px at 47% 22%, #fffa, transparent), radial-gradient(1px 1px at 63% 78%, #fff6, transparent),
   radial-gradient(1.2px 1.2px at 78% 35%, #fff8, transparent), radial-gradient(1px 1px at 92% 70%, #fff6, transparent); }
-.top .logo { color: #fff; }
+/* Light theme: plain bar with a hairline instead of the night sky. */
+:root[data-theme="light"] { --sky: none; }
+:root[data-theme="light"] .top { box-shadow: 0 1px 0 var(--top-line); }
+.top .logo { color: var(--star); }
+#lg1b stop:first-child, #lg2b stop:first-child { stop-color: var(--logo-a); }
+#lg1b stop:last-child, #lg2b stop:last-child { stop-color: var(--logo-b); }
 .logo .tail { transform-box: view-box; transform-origin: 50px 64px; animation: sway 3.6s ease-in-out infinite; }
 .logo .cat, .logo .paws { transform-box: view-box; transform-origin: 32px 58px; animation: breathe 4s ease-in-out infinite; }
 .logo .glow, .logo .chin { animation: glow 4s ease-in-out infinite; }
@@ -205,6 +212,16 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
 .switch input:checked { background: var(--accent); }
 .switch input:checked::after { transform: translateX(16px); }
 .actions { display: grid; gap: 8px; }
+/* Install on this PC: the page shows the agent's progress. */
+.inst-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.inst-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.inst-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 40vh; overflow: auto; }
+.inst-list li { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 4px; font-size: 13px; }
+.inst-list li small { color: var(--muted); }
+.inst-list li.installed small { color: var(--ok); }
+.inst-list li.failed small { color: var(--warn); }
+#instSub { white-space: pre-line; }
+.inst-log { margin: 0; font: 400 11px/1.5 var(--font-mono); color: var(--muted); white-space: pre-wrap; max-height: 7.5em; overflow: hidden; }
 .toast { margin: 0; font-size: 12.5px; color: var(--ok); min-height: 1.2em; }
 .notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .notes li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 12.5px; color: var(--muted); }
@@ -388,17 +405,6 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
       <div class="templates" id="presets"></div>
     </section>
 
-    <section aria-labelledby="h-scripts" id="scriptsSec">
-      <div class="sec-h stack"><h2 id="h-scripts" tabindex="-1" data-i18n="scH">Scripts to run at the end</h2><p data-i18n="scSub">Optional. They run as administrator after all apps install, in this order. You can still turn each one off when the installer starts.</p><button type="button" class="fold" aria-expanded="true" aria-label="Show or hide" data-i18n-aria="fold"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
-      <div class="sc-box">
-        <div id="scriptList"></div>
-        <div class="sc-foot">
-          <button type="button" class="btn" id="scriptAdd"><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span data-i18n="scAdd">Add your own…</span></button>
-          <p class="hint" id="scriptsNote" role="status" data-i18n="scNote">PowerShell or Command Prompt. Type one, or open a .ps1, .cmd or .bat file.</p>
-        </div>
-      </div>
-    </section>
-
     <section aria-labelledby="listTitle">
       <div class="sec-h"><h2 id="listTitle">All apps</h2><p id="listSub"></p></div>
       <div class="listbar">
@@ -409,6 +415,17 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
         </div>
       </div>
       <div class="groups" id="catalog"></div>
+    </section>
+
+    <section aria-labelledby="h-scripts" id="scriptsSec">
+      <div class="sec-h stack"><h2 id="h-scripts" tabindex="-1" data-i18n="scH">Scripts to run at the end</h2><p data-i18n="scSub">Optional. They run as administrator after all apps install, in this order. You can still turn each one off when the installer starts.</p><button type="button" class="fold" aria-expanded="true" aria-label="Show or hide" data-i18n-aria="fold"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+      <div class="sc-box">
+        <div id="scriptList"></div>
+        <div class="sc-foot">
+          <button type="button" class="btn" id="scriptAdd"><svg width="12" height="12" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span data-i18n="scAdd">Add your own…</span></button>
+          <p class="hint" id="scriptsNote" role="status" data-i18n="scNote">PowerShell or Command Prompt. Type one, or open a .ps1, .cmd or .bat file.</p>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -423,6 +440,7 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
       <label class="switch" for="autoUpdate"><b data-i18n="weekly">Weekly updates</b><input type="checkbox" id="autoUpdate"><small data-i18n="weeklySub">Updates all your apps every Sunday, or the next time your PC is on.</small></label>
       <div class="actions">
         <button class="btn primary big" id="dl" type="button" data-i18n="download">Download installer</button>
+        <button class="btn big" id="go" type="button" data-i18n="installNow">Install on this PC</button>
         <button class="btn" id="clear" type="button" data-i18n="clear">Clear selection</button>
       </div>
       <p class="toast" id="toast" role="status"></p>
@@ -452,6 +470,19 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
   <button class="btn primary" id="dl2" type="button" data-i18n="download">Download installer</button>
 </div>
 
+<dialog class="dlg" id="instDlg" aria-labelledby="instTitle">
+  <div class="dlg-h"><div><h2 id="instTitle"></h2><p id="instSub"></p></div></div>
+  <div class="dlg-b">
+    <div class="inst-bar"><i id="instBar"></i></div>
+    <ol class="inst-list" id="instList"></ol>
+    <pre class="inst-log" id="instLog"></pre>
+  </div>
+  <div class="dlg-f">
+    <button type="button" class="btn" id="instAgent" hidden data-i18n="instAgent">Download the agent</button>
+    <button type="button" class="btn" id="instCancel" data-i18n="cancel">Cancel</button>
+    <button type="button" class="btn primary" id="instClose" hidden data-i18n="close">Close</button>
+  </div>
+</dialog>
 <dialog class="dlg" id="scriptDlg" aria-labelledby="scriptDlgTitle" aria-describedby="scriptDlgSub">
   <div class="dlg-h">
     <div><h2 id="scriptDlgTitle">Add your own script</h2><p id="scriptDlgSub" data-i18n="dlgSub">Type or paste it below, or open a file from your PC.</p></div>
@@ -667,6 +698,18 @@ const I18N = {
     loadFail: "The installer file didn't load. Reload the page and try again.",
     noDownloads: "Downloads aren't available in this view. Open the page in a browser to download.",
     savedZip: "Saved. Open the zip, extract Crescent.exe, and double-click it.", dlCancelled: "Download cancelled.",
+    installNow: "Install on this PC", instWaitT: "Starting Crescent…",
+    instWaitD: "If your browser asks, choose Open Crescent. Then choose Yes when Windows asks for admin access. First time here? Download the agent and open it once.",
+    instRunT: "Installing", instDoneT: "All set", instStopT: "Stopped", stopping: "Stopping…",
+    instSum: (i, s, f) => `Installed: ${i} · Already there: ${s} · Failed: ${f}`,
+    instNoAgentT: "Crescent isn't set up on this PC yet",
+    instNoAgentD: "Download the agent and open it once, then press Install on this PC again. Or use Download installer instead.",
+    instAgent: "Download the agent", instLost: "Lost contact with Crescent. It may still be working in the background.",
+    installNowMac: "Install on this Mac",
+    instWaitDMac: "If your browser asks, allow it to open Crescent Agent. First time here? Download the agent, open the zip, then open Crescent once.",
+    instNoAgentTMac: "Crescent isn't set up on this Mac yet",
+    instNoAgentDMac: "Download the agent, open the zip, then open Crescent once (the first time, choose Open Anyway in System Settings, Privacy & Security). Then press Install on this Mac again. Or use Download installer instead.",
+    oc_: "", oc_now: "Installing…", oc_installed: "Installed", oc_skipped: "Already there", oc_failed: "Failed", oc_cancelled: "Cancelled",
     saveFail: "Couldn't save the file. Try again in a moment.", downloaded: "Downloaded Crescent.exe. Double-click it to start.",
     cleared: "Selection cleared.",
     badId: "That doesn't look like a winget ID. IDs look like Publisher.AppName, for example Microsoft.Edge.",
@@ -762,6 +805,18 @@ const I18N = {
     loadFail: "Fișierul instalatorului nu s-a încărcat. Reîncarcă pagina și încearcă din nou.",
     noDownloads: "Descărcările nu sunt disponibile aici. Deschide pagina într-un browser ca să descarci.",
     savedZip: "Salvat. Deschide arhiva zip, extrage Crescent.exe și dă dublu clic pe el.", dlCancelled: "Descărcare anulată.",
+    installNow: "Instalează pe acest PC", instWaitT: "Pornesc Crescent…",
+    instWaitD: "Dacă browserul întreabă, alege Deschide Crescent. Apoi alege Da când Windows cere acces de administrator. Prima dată aici? Descarcă agentul și deschide-l o dată.",
+    instRunT: "Se instalează", instDoneT: "Gata", instStopT: "Oprit", stopping: "Se oprește…",
+    instSum: (i, s, f) => `Instalate: ${i} · Existau deja: ${s} · Eșuate: ${f}`,
+    instNoAgentT: "Crescent nu e încă pregătit pe acest PC",
+    instNoAgentD: "Descarcă agentul și deschide-l o dată, apoi apasă din nou Instalează pe acest PC. Sau folosește Descarcă instalatorul.",
+    instAgent: "Descarcă agentul", instLost: "Am pierdut legătura cu Crescent. Poate lucrează încă în fundal.",
+    installNowMac: "Instalează pe acest Mac",
+    instWaitDMac: "Dacă browserul întreabă, permite-i să deschidă Crescent Agent. Prima dată aici? Descarcă agentul, deschide arhiva zip, apoi deschide Crescent o dată.",
+    instNoAgentTMac: "Crescent nu e încă pregătit pe acest Mac",
+    instNoAgentDMac: "Descarcă agentul, deschide arhiva zip, apoi deschide Crescent o dată (prima dată alege Deschide oricum în Configurări sistem, Confidențialitate și securitate). Apoi apasă din nou Instalează pe acest Mac. Sau folosește Descarcă instalatorul.",
+    oc_: "", oc_now: "Se instalează…", oc_installed: "Instalat", oc_skipped: "Exista deja", oc_failed: "Eșuat", oc_cancelled: "Anulat",
     saveFail: "Fișierul nu a putut fi salvat. Încearcă din nou peste câteva momente.", downloaded: "Crescent.exe a fost descărcat. Dă dublu clic pe el ca să pornească.",
     cleared: "Selecția a fost golită.",
     badId: "Acesta nu pare un ID winget. ID-urile arată ca Editor.Aplicație, de exemplu Microsoft.Edge.",
@@ -875,16 +930,22 @@ function selectedApps() {
 // order) is appended to its end: <JSON><uint32 LE length>"AUTOINS1". The program reads that trailer
 // back when it runs.
 let baseExe = null;
-function buildExe() {
+function loadBase() {
   if (!baseExe) {
     const b64 = window.CRESCENT_EXE_B64;
     if (!b64) throw new Error("missing base installer");
     const bin = atob(b64); baseExe = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) baseExe[i] = bin.charCodeAt(i);
   }
+  return baseExe;
+}
+function winPayload() {
   const sc = tickedScripts().slice(0, SCRIPT_MAX).map(s => ({ name: s.name, kind: s.kind, body: s.body }));
-  const payload = { apps: selectedApps(), autoUpdate: $("#autoUpdate").checked, ...(sc.length && { scripts: sc }) };
-  const json = new TextEncoder().encode(JSON.stringify(payload));
+  return { apps: selectedApps(), autoUpdate: $("#autoUpdate").checked, ...(sc.length && { scripts: sc }) };
+}
+function buildExe() {
+  loadBase();
+  const json = new TextEncoder().encode(JSON.stringify(winPayload()));
   const out = new Uint8Array(baseExe.length + json.length + 12);
   out.set(baseExe, 0);
   out.set(json, baseExe.length);
@@ -918,21 +979,27 @@ const MAC_PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 </dict>
 </plist>
 `;
-function buildMacApp() {
+function macProgram() {
   if (!macBase) {
     const b64 = window.CRESCENT_MAC_B64;
     if (!b64) throw new Error("missing Mac installer");
     const bin = atob(b64); macBase = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) macBase[i] = bin.charCodeAt(i);
   }
+  return macBase;
+}
+function macPayload() {
   const sc = tickedScripts().slice(0, SCRIPT_MAX).map(s => ({ name: s.name, kind: s.kind, body: s.body }));
   const apps = selectedApps().map(a => ({ id: MAC_PKG[a.id] || a.id, name: a.name, ...(a.icon && { icon: a.icon }) }));
-  const payload = { apps, autoUpdate: $("#autoUpdate").checked, ...(sc.length && { scripts: sc }) };
+  return { apps, autoUpdate: $("#autoUpdate").checked, ...(sc.length && { scripts: sc }) };
+}
+// Without an app list (withList false) the app is the agent behind Install on this Mac.
+function buildMacApp(withList = true) {
   const enc = new TextEncoder(), app = "Crescent.app/Contents/";
   return zipFiles([
     { name: app + "Info.plist", data: enc.encode(MAC_PLIST) },
-    { name: app + "MacOS/Crescent", data: macBase, mode: 0o755 },
-    { name: app + "Resources/apps.json", data: enc.encode(JSON.stringify(payload)) },
+    { name: app + "MacOS/Crescent", data: macProgram(), mode: 0o755 },
+    ...(withList ? [{ name: app + "Resources/apps.json", data: enc.encode(JSON.stringify(macPayload())) }] : []),
   ]);
 }
 
@@ -982,7 +1049,7 @@ function update() {
   $$(".js-n").forEach(e => e.textContent = n);
   $("#nlabel").textContent = label; $$(".js-nlabel").forEach(e => e.textContent = label);
   $$(".js-nscripts").forEach(e => e.textContent = sc.length ? t("nScripts", sc.length) : "");
-  ["#dl", "#dl2"].forEach(s => $(s).disabled = n === 0);
+  ["#dl", "#dl2", "#go"].forEach(s => $(s).disabled = n === 0);
   $("#clear").disabled = n === 0 && !sc.length;
   $("#size").textContent = baseSize ? t("sizeAdmin", (baseSize / 1048576).toLocaleString(lang === "ro" ? "ro-RO" : "en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 })) : t("runsAdmin");
   // Apps first, then the ticked scripts, numbered in the order the installer runs them.
@@ -1349,6 +1416,102 @@ async function downloadMac() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast(t("downloaded")); hop();
 }
+// Install on this PC: crescent://install?token=… starts the Crescent agent (set up once by opening
+// the plain program, "the agent"), which listens on 127.0.0.1. This page sends it the list and shows
+// the progress it reports. Without the agent nothing answers, and the page offers it for download.
+const AGENT = "http://127.0.0.1:47615";
+const AGENT_VERSION = 4; // agentVersion in installer/agent.go
+const inst = $("#instDlg");
+let instRun = null; // { token, phase: "wait" | "run" | "end" }
+const agentFetch = (path, body) => fetch(AGENT + path, {
+  method: body === undefined ? "GET" : "POST", headers: { "X-Crescent-Token": instRun.token, "Content-Type": "application/json" },
+  ...(body !== undefined && { body: JSON.stringify(body) }), signal: AbortSignal.timeout(4000),
+});
+function instScreen(title, sub) { $("#instTitle").textContent = title; $("#instSub").textContent = sub; }
+function instEnd(run, title, sub) {
+  run.phase = "end"; instScreen(title, sub);
+  $("#instCancel").hidden = true; $("#instClose").hidden = false;
+}
+async function installNow() {
+  if (!selected.size) return;
+  if (inViewer) { toast(t("noDownloads"), "err"); return; }
+  const token = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, "0")).join("");
+  const payload = plat === "mac" ? macPayload() : winPayload(), run = instRun = { token, phase: "wait" };
+  instScreen(t("instWaitT"), t("instWaitD"));
+  $("#instBar").style.width = "0";
+  // The rows come from the catalog, so a Mac app shows its icon, not its Homebrew name.
+  $("#instList").innerHTML = selectedApps().map(a => `<li>${tile(a.name, a.id, "sm")}<span>${esc(appName(a.id, a.name))}</span><small></small></li>`).join("");
+  $("#instLog").textContent = "";
+  // The agent download stays offered until the agent answers.
+  $("#instAgent").hidden = false; $("#instClose").hidden = true;
+  $("#instCancel").hidden = $("#instCancel").disabled = false; $("#instCancel").textContent = t("cancel");
+  inst.showModal();
+  // When crescent:// is set up, the browser's "Open Crescent?" question (or Windows' admin prompt)
+  // takes the focus from the page. No focus change means no agent, so the download shows at once.
+  let blurred = false;
+  window.addEventListener("blur", () => blurred = true, { once: true });
+  location.href = "crescent://install?token=" + token;
+  const noAgent = () => { instScreen(t("instNoAgentT"), t("instNoAgentD")); $("#instAgent").hidden = false; };
+  setTimeout(() => { if (!blurred && instRun === run && run.phase === "wait") noAgent(); }, 2500);
+  // Wait for the agent, by the clock: on Windows a refused connection takes about 2 seconds.
+  let agent;
+  for (const until = Date.now() + 30000; ;) {
+    if (instRun !== run) return;
+    try { const r = await agentFetch("/state"); if (r.ok) { agent = await r.json(); break; } } catch {}
+    if (Date.now() > until) { instEnd(run, t("instNoAgentT"), t("instNoAgentD")); noAgent(); return; }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  $("#instAgent").hidden = true;
+  // An older agent gets this page's program, which it uses from the next Install on.
+  if ((agent.version || 1) < AGENT_VERSION) {
+    try { await fetch(AGENT + "/update", { method: "POST", headers: { "X-Crescent-Token": token, "Content-Type": "application/octet-stream" }, body: plat === "mac" ? macProgram() : loadBase() }); } catch {}
+  }
+  let r;
+  try { r = await agentFetch("/start", payload); } catch {}
+  if (!r || !r.ok) { instEnd(run, t("instStopT"), r ? await r.text() : t("instLost")); return; }
+  run.phase = "run";
+  instScreen(t("instRunT"), "");
+  for (let misses = 0; instRun === run && misses < 10;) {
+    await new Promise(r => setTimeout(r, 800));
+    let st;
+    try { st = await (await agentFetch("/state")).json(); misses = 0; } catch { misses++; continue; }
+    const rows = $$("#instList li");
+    st.outcomes.forEach((o, i) => {
+      if (!rows[i]) return;
+      const now = !o && i === st.done && !st.finished;
+      rows[i].className = o; rows[i].lastChild.textContent = t("oc_" + (now ? "now" : o));
+    });
+    $("#instBar").style.width = (st.total ? 100 * st.done / st.total : 0) + "%";
+    $("#instLog").textContent = st.log.slice(-5).join("\n");
+    if (!st.finished) { $("#instSub").textContent = st.status; continue; }
+    const res = st.result;
+    instEnd(run, t(res.cancelled ? "instStopT" : "instDoneT"), [t("instSum", res.installed, res.skipped, res.failed.length), ...res.notes].join("\n"));
+    hop();
+    return;
+  }
+  if (instRun === run) instEnd(run, t("instStopT"), t("instLost"));
+}
+$("#go").addEventListener("click", installNow);
+$("#instCancel").addEventListener("click", () => {
+  if (instRun?.phase === "run") { agentFetch("/cancel", {}).catch(() => {}); $("#instCancel").disabled = true; $("#instCancel").textContent = t("stopping"); return; }
+  instRun = null; inst.close();
+});
+$("#instClose").addEventListener("click", () => { instRun = null; inst.close(); });
+// Escape mustn't hide an install that is running.
+inst.addEventListener("cancel", e => { if (instRun?.phase === "run") e.preventDefault(); else instRun = null; });
+$("#instAgent").addEventListener("click", () => {
+  const a = document.createElement("a");
+  if (plat === "mac") {
+    try { a.href = URL.createObjectURL(buildMacApp(false)); } catch { toast(t("macLoading"), "err"); loadMacBase(); return; }
+    a.download = "Crescent-agent.zip";
+  } else {
+    a.href = URL.createObjectURL(new Blob([loadBase()], { type: "application/octet-stream" }));
+    a.download = "Crescent-agent.exe";
+  }
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
 $("#dl").addEventListener("click", download);
 $("#dl2").addEventListener("click", download);
 

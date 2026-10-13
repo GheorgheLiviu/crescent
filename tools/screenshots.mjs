@@ -92,4 +92,9 @@ await p.waitForTimeout(100);
 await shot(p, "page-scripts-list.png");
 await p.close();
 
+// The Mac page: the platform choice is remembered in localStorage.
+p = await open("web/index.html", { width: 1280, height: 860, init: () => localStorage.setItem("ai-platform", "mac") });
+await shot(p, "page-mac.png");
+await p.close();
+
 await browser.close();

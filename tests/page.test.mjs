@@ -573,7 +573,9 @@ test("the Scripts entry in the sidebar goes to the Scripts section", async () =>
   const p = await page();
   await p.click('#cats [data-goto="scriptsSec"]');
   await p.waitForFunction(() => document.activeElement.id === "h-scripts");
-  await p.waitForFunction(() => Math.abs(document.querySelector("#scriptsSec").getBoundingClientRect().top - 72) < 4);
+  // It's the last section, so it scrolls to the top of the view or as far as the page goes.
+  await p.waitForFunction(() => { const r = document.querySelector("#scriptsSec").getBoundingClientRect();
+    return Math.abs(r.top - 72) < 4 || (r.top > 72 && Math.ceil(scrollY + innerHeight) >= document.documentElement.scrollHeight); });
   assert.equal(await p.$eval('#cats [aria-current="true"]', b => b.dataset.cat), "All", "it isn't an app category");
   await p.close();
 });
@@ -679,4 +681,65 @@ test("open-source apps link to their source code without ticking the app", async
   await p.evaluate(() => document.addEventListener("click", e => e.target.closest("a.repo") && e.preventDefault()));
   await p.click('#catalog label[data-row="Mozilla.Firefox"] a.repo');
   assert.equal(await p.isChecked('#catalog input[data-id="Mozilla.Firefox"]'), false, "the link doesn't tick the app");
+});
+
+test("Install on this PC sends the list to the agent and shows its progress", async () => {
+  const p = await page();
+  let sent = null, polls = 0, updated = 0;
+  const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
+  await p.route("http://127.0.0.1:47615/**", async r => {
+    const req = r.request();
+    assert.match(req.headers()["x-crescent-token"] || "", /^[0-9a-f]{32}$/);
+    if (req.url().endsWith("/update")) { updated = req.postDataBuffer().length; return r.fulfill({ status: 204, headers: cors }); }
+    if (req.method() === "POST") { sent = req.postDataJSON(); return r.fulfill({ status: 204, headers: cors }); }
+    const done = sent && ++polls > 1;
+    r.fulfill({ headers: cors, contentType: "application/json", body: JSON.stringify({
+      started: !!sent, done: done ? 4 : 0, total: 4, status: "", log: [], finished: done,
+      outcomes: sent ? ["installed", "skipped", done ? "failed" : "", done ? "installed" : ""] : [],
+      ...(done && { result: { installed: 2, skipped: 1, failed: ["VLC"], notes: [], cancelled: false } }) }) });
+  });
+  await p.click("#go");
+  await p.waitForFunction(() => /All set/.test(document.querySelector("#instTitle").textContent));
+  assert.deepEqual(sent.apps.map(a => a.id), await ids(p));
+  assert.equal(updated, fs.statSync(path.join(ROOT, "installer", "Crescent-base.exe")).size, "an agent without a version gets the new program");
+  assert.match(await p.textContent("#instSub"), /Installed: 2 · Already there: 1 · Failed: 1/);
+  assert.equal(await p.$$eval("#instList li.failed", l => l.length), 1);
+  await p.click("#instClose");
+  assert.equal(await p.$eval("#instDlg", d => d.open), false);
+  await p.close();
+});
+
+test("Install on this Mac sends Homebrew names and the Mac program to the agent", async () => {
+  const p = await page();
+  await p.click('#platSw [data-plat="mac"]');
+  assert.equal(await p.textContent("#go"), "Install on this Mac");
+  await p.waitForFunction(() => window.CRESCENT_MAC_B64);
+  let sent = null, updated = null;
+  const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
+  await p.route("http://127.0.0.1:47615/**", async r => {
+    const req = r.request();
+    if (req.url().endsWith("/update")) { updated = req.postDataBuffer(); return r.fulfill({ status: 204, headers: cors }); }
+    if (req.method() === "POST") { sent = req.postDataJSON(); return r.fulfill({ status: 204, headers: cors }); }
+    r.fulfill({ headers: cors, contentType: "application/json", body: JSON.stringify({
+      version: 1, started: !!sent, done: sent ? 4 : 0, total: 4, status: "", log: [], finished: !!sent, outcomes: sent ? ["installed", "installed", "installed", "installed"] : [],
+      ...(sent && { result: { installed: 4, skipped: 0, failed: [], notes: [], cancelled: false } }) }) });
+  });
+  await p.click("#go");
+  await p.waitForFunction(() => /All set/.test(document.querySelector("#instTitle").textContent));
+  assert.deepEqual(sent.apps.map(a => a.id), ["cask:google-chrome", "formula:sevenzip", "cask:vlc", "cask:discord"]);
+  assert.deepEqual([...updated.subarray(0, 4)], [0xca, 0xfe, 0xba, 0xbe], "an older agent gets the Mac program");
+  assert.equal(await p.$$eval("#instList li img.tile", l => l.length), 4, "rows show the apps' icons");
+  await p.click("#instClose");
+  const zip = unzip(Buffer.from(await p.evaluate(() => new Promise(done => {
+    const r = new FileReader(); r.onload = () => done(r.result.split(",")[1]); r.readAsDataURL(buildMacApp(false));
+  })), "base64"));
+  assert.deepEqual(Object.keys(zip), ["Crescent.app/Contents/Info.plist", "Crescent.app/Contents/MacOS/Crescent"], "the agent has no app list");
+  assert.deepEqual(p.errors, []);
+  await p.close();
+});
+
+test("the page and the agent agree on the agent version", () => {
+  const go = fs.readFileSync(path.join(ROOT, "installer", "agent.go"), "utf8").match(/const agentVersion = (\d+)/)[1];
+  const page = fs.readFileSync(path.join(ROOT, "web", "index.html"), "utf8").match(/const AGENT_VERSION = (\d+)/)[1];
+  assert.equal(page, go);
 });

@@ -27,9 +27,14 @@ import (
 var uiHTML string
 
 // alert shows a message box, for problems before the installer tab can open.
-func alert(msg string) {
+func alert(msg string) { showAlert(msg, " as critical") }
+
+// notice shows a message box that isn't about a problem.
+func notice(msg string) { showAlert(msg, "") }
+
+func showAlert(msg, kind string) {
 	exec.Command("osascript", "-e", "on run argv", "-e",
-		`display alert "Crescent" message (item 1 of argv) as critical`, "-e", "end run", msg).Run()
+		`display alert "Crescent" message (item 1 of argv)`+kind, "-e", "end run", msg).Run()
 }
 
 // loadMacApps reads the app list the page put inside the app.
@@ -39,6 +44,9 @@ func loadMacApps() (*Payload, []App, error) {
 		return nil, nil, fmt.Errorf("couldn't locate this installer: %w", err)
 	}
 	data, err := os.ReadFile(filepath.Join(filepath.Dir(exe), "..", "Resources", "apps.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil, errNoPayload // the plain app: the web installer agent
+	}
 	if err != nil {
 		return nil, nil, errors.New("this installer has no app list. Build a new one from the Crescent page")
 	}
@@ -143,6 +151,35 @@ func installBrew(ui UI) (string, error) {
 	return brew, nil
 }
 
+// installAll installs Homebrew when it's missing, then the apps, then turns on weekly updates if
+// asked. Scripts are up to the caller.
+func installAll(in *Installer, autoUpdate bool, apps []App, ui UI) Result {
+	var r Result
+	if in.Brew == "" {
+		ui.Progress(0, len(apps), "Installing Homebrew")
+		brew, err := installBrew(ui)
+		if err != nil {
+			ui.Log("Couldn't install Homebrew: " + err.Error())
+			for i, a := range apps {
+				ui.Outcome(i, "failed")
+				r.Failed = append(r.Failed, a.Name)
+			}
+			r.Notes = append(r.Notes, "Homebrew couldn't be installed, so no app was: "+err.Error())
+			return r
+		}
+		in.Brew = brew
+	}
+	r = in.Run(apps, ui)
+	if autoUpdate && !r.Cancelled {
+		if path, err := scheduleBrewUpdates(in.Brew); err != nil {
+			r.Notes = append(r.Notes, "Couldn't turn on weekly updates: "+err.Error())
+		} else {
+			r.Notes = append(r.Notes, "Weekly updates are on. To turn them off, delete "+path+".")
+		}
+	}
+	return r
+}
+
 // hub sends the installer's progress to the open tab (Server-Sent Events) and tracks whether a
 // tab is still connected.
 type hub struct {
@@ -225,7 +262,16 @@ const bridge = `(() => {
 })();`
 
 func main() {
+	// The page's Install button opens crescent://…, which the agent's AppleScript app passes on here.
+	if len(os.Args) > 1 && strings.HasPrefix(strings.ToLower(os.Args[1]), "crescent:") {
+		runAgent(os.Args[1])
+		return
+	}
 	payload, apps, err := loadMacApps()
+	if errors.Is(err, errNoPayload) {
+		registerAgent()
+		return
+	}
 	if err != nil {
 		alert(capitalize(err.Error()) + ".")
 		return
@@ -287,30 +333,7 @@ func main() {
 			return
 		}
 		goWork(func() {
-			var r Result
-			if in.Brew == "" {
-				ui.Progress(0, len(apps), "Installing Homebrew")
-				if brew, err := installBrew(ui); err != nil {
-					ui.Log("Couldn't install Homebrew: " + err.Error())
-					for i, a := range apps {
-						ui.Outcome(i, "failed")
-						r.Failed = append(r.Failed, a.Name)
-					}
-					r.Notes = append(r.Notes, "Homebrew couldn't be installed, so no app was: "+err.Error())
-				} else {
-					in.Brew = brew
-				}
-			}
-			if in.Brew != "" {
-				r = in.Run(apps, ui)
-				if payload.AutoUpdate && !r.Cancelled {
-					if path, err := scheduleBrewUpdates(in.Brew); err != nil {
-						r.Notes = append(r.Notes, "Couldn't turn on weekly updates: "+err.Error())
-					} else {
-						r.Notes = append(r.Notes, "Weekly updates are on. To turn them off, delete "+path+".")
-					}
-				}
-			}
+			r := installAll(in, payload.AutoUpdate, apps, ui)
 			for i := range scripts {
 				if i < len(runScripts) && runScripts[i] && !in.cancelled.Load() {
 					r.Notes = append(r.Notes, runScript(i))

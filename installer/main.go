@@ -170,6 +170,9 @@ func scheduleUpdates(winget string) error {
 	return nil
 }
 
+// errNoPayload means this is the plain program with no app list: the web installer agent.
+var errNoPayload = errors.New("no app list found in this installer")
+
 var idPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9.+_-]{1,99}$`)
 
 // storeID matches Microsoft Store product IDs such as 9NKSQGP7F2NH (WhatsApp), which install
@@ -179,7 +182,7 @@ var storeID = regexp.MustCompile(`^[0-9A-Z]{12}$`)
 func readPayload(exe []byte) (*Payload, error) {
 	n := len(exe)
 	if n < len(magic)+4 || string(exe[n-len(magic):]) != magic {
-		return nil, errors.New("no app list found in this installer")
+		return nil, errNoPayload
 	}
 	size := int(binary.LittleEndian.Uint32(exe[n-len(magic)-4 : n-len(magic)]))
 	start := n - len(magic) - 4 - size

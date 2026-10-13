@@ -3,6 +3,7 @@ package main
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -90,7 +91,16 @@ func finish(winget string, payload *Payload, r *Result) {
 }
 
 func main() {
+	// The page's Install button opens crescent://…; with no app list, this program sets that up.
+	if len(os.Args) > 1 && strings.HasPrefix(strings.ToLower(os.Args[1]), "crescent:") {
+		runAgent(os.Args[1])
+		return
+	}
 	payload, apps, err := loadApps()
+	if errors.Is(err, errNoPayload) {
+		registerAgent()
+		return
+	}
 	if err != nil {
 		msgBox(capitalize(err.Error())+".", mbOK|mbIconError)
 		return

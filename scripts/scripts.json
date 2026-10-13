@@ -42,5 +42,16 @@
     },
     "windows": "windows/install-rea.ps1",
     "mac": "mac/install-rea.sh"
+  },
+  {
+    "id": "install-ghidra",
+    "name": "Install Ghidra (reverse engineering)",
+    "description": "Installs Ghidra, the free reverse engineering tool from the NSA, which takes apart programs to show how they work. Also installs the Java it needs.",
+    "ro": {
+      "name": "Instalează Ghidra (reverse engineering)",
+      "description": "Instalează Ghidra, unealta gratuită de reverse engineering de la NSA, care desface programele ca să vezi cum funcționează. Instalează și Java de care are nevoie."
+    },
+    "windows": "windows/install-ghidra.ps1",
+    "mac": "mac/install-ghidra.sh"
   }
 ]
