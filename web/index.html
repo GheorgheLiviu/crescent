@@ -938,11 +938,17 @@ function selectedApps() {
 // The prebuilt program (installer-base.js, about 10 MB) loads after the page is drawn, so it never
 // holds the page up.
 let baseExe = null;
+// loadWinBase starts that load once and returns a promise for it; after a failed load the next call tries again.
+let winBaseLoad = null;
 function loadWinBase() {
-  if (window.CRESCENT_EXE_B64 || $("#winBase")) return;
-  const sc = document.createElement("script");
-  sc.id = "winBase"; sc.src = "installer-base.js"; sc.onload = update;
-  document.head.append(sc);
+  if (window.CRESCENT_EXE_B64) return Promise.resolve();
+  return winBaseLoad ||= new Promise((ok, fail) => {
+    const sc = document.createElement("script");
+    sc.src = "installer-base.js";
+    sc.onload = () => { update(); ok(); };
+    sc.onerror = () => { sc.remove(); winBaseLoad = null; fail(new Error("installer-base.js didn't load")); };
+    document.head.append(sc);
+  });
 }
 function loadBase() {
   if (!baseExe) {
@@ -1395,7 +1401,7 @@ function hop() { const a = $(".art"); if (!a) return; a.classList.remove("hop");
 async function download() {
   if (plat === "mac") return downloadMac();
   let exe;
-  try { exe = buildExe(); } catch { toast(t(window.CRESCENT_EXE_B64 ? "loadFail" : "exeLoading"), "err"); loadWinBase(); return; }
+  try { exe = buildExe(); } catch { toast(t(window.CRESCENT_EXE_B64 ? "loadFail" : "exeLoading"), "err"); loadWinBase().catch(() => {}); return; }
   if (inViewer) {
     if (!downloads) { toast(t("noDownloads"), "err"); return; }
     try {
@@ -1478,6 +1484,7 @@ async function installNow() {
   $("#instAgent").hidden = true;
   // An older agent gets this page's program, which it uses from the next Install on.
   if ((agent.version || 1) < AGENT_VERSION) {
+    if (plat !== "mac") await loadWinBase().catch(() => {});
     try { await fetch(AGENT + "/update", { method: "POST", headers: { "X-Crescent-Token": token, "Content-Type": "application/octet-stream" }, body: plat === "mac" ? macProgram() : loadBase() }); } catch {}
   }
   let r;
@@ -1519,7 +1526,7 @@ $("#instAgent").addEventListener("click", () => {
     try { a.href = URL.createObjectURL(buildMacApp(false)); } catch { toast(t("macLoading"), "err"); loadMacBase(); return; }
     a.download = "Crescent-agent.zip";
   } else {
-    try { a.href = URL.createObjectURL(new Blob([loadBase()], { type: "application/octet-stream" })); } catch { toast(t("exeLoading"), "err"); loadWinBase(); return; }
+    try { a.href = URL.createObjectURL(new Blob([loadBase()], { type: "application/octet-stream" })); } catch { toast(t("exeLoading"), "err"); loadWinBase().catch(() => {}); return; }
     a.download = "Crescent-agent.exe";
   }
   document.body.appendChild(a); a.click(); a.remove();
@@ -1645,7 +1652,7 @@ function setPlat(p) {
   const dropped = [...selected].filter(id => !avail(id));
   dropped.forEach(id => { selected.delete(id); byHand.delete(id); });
   if (cat !== "All" && cat !== "Selected" && !groups().some(g => g[0] === cat)) cat = "All";
-  if (plat === "mac") loadMacBase(); else loadWinBase();
+  if (plat === "mac") loadMacBase(); else loadWinBase().catch(() => {});
   applyLang();
   if (dropped.length) toast(t("dropped", dropped.length));
 }
@@ -1659,6 +1666,6 @@ $("#langSw").addEventListener("click", e => {
 
 [...selected].filter(id => !avail(id)).forEach(id => { selected.delete(id); byHand.delete(id); });
 applyLang();
-if (plat === "mac") loadMacBase(); else loadWinBase();
+if (plat === "mac") loadMacBase(); else loadWinBase().catch(() => {});
 </script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a1874b4a92c443f8b1b560be1af5b3b8"}'></script><!-- End Cloudflare Web Analytics -->
