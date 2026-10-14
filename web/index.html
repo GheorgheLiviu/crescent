@@ -361,6 +361,11 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
+<!-- The catalog, icons and script library load before the page is drawn, so it appears already
+     filled in and nothing jumps (layout shift). The big installer programs load later, on their own. -->
+<script src="apps.js"></script>
+<script src="icons.js"></script>
+<script src="scripts.js"></script>
 
 <header class="top">
   <div class="brand">
@@ -538,10 +543,6 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
   </div>
 </dialog>
 
-<script src="apps.js"></script>
-<script src="icons.js"></script>
-<script src="scripts.js"></script>
-<script src="installer-base.js"></script>
 <script>
 // The catalog lives in apps.js (window.CRESCENT_APPS): plain JSON, easy to edit by hand.
 const APPS = window.CRESCENT_APPS || { groups: [], templates: [], starter: [], downloads: {}, fixedLocation: [] };
@@ -627,7 +628,7 @@ const enN = (n, one, many) => `${n.toLocaleString("en-US")} ${n === 1 ? one : ma
 const I18N = {
   en: {
     search: "Search apps", language: "Language", categories: "Categories",
-    platform: "Computer", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "The Mac installer is still loading. Try again in a moment.",
+    platform: "Computer", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "The Mac installer is still loading. Try again in a moment.", exeLoading: "The installer is still loading. Try again in a moment.",
     dropped: n => `${enN(n, "app has", "apps have")} no Mac version and left the selection.`,
     addByIdMac: "Add by Homebrew name", idExampleMac: "app-name", wingetIdMac: "Homebrew name",
     idHintMac: 'Find names on <a href="https://formulae.brew.sh" target="_blank" rel="noopener">formulae.brew.sh</a> or with <code>brew search</code>.',
@@ -733,7 +734,7 @@ const I18N = {
   },
   ro: {
     search: "Caută aplicații", language: "Limbă", categories: "Categorii",
-    platform: "Calculator", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "Instalatorul pentru Mac încă se încarcă. Încearcă din nou imediat.",
+    platform: "Calculator", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "Instalatorul pentru Mac încă se încarcă. Încearcă din nou imediat.", exeLoading: "Instalatorul încă se încarcă. Încearcă din nou imediat.",
     dropped: n => n === 1 ? "O aplicație nu are versiune de Mac și a fost scoasă din selecție." : `${roN(n, "aplicație", "aplicații")} nu au versiune de Mac și au fost scoase din selecție.`,
     addByIdMac: "Adaugă după numele Homebrew", idExampleMac: "nume-aplicatie", wingetIdMac: "Nume Homebrew",
     idHintMac: 'Găsești numele pe <a href="https://formulae.brew.sh" target="_blank" rel="noopener">formulae.brew.sh</a> sau cu <code>brew search</code>.',
@@ -934,7 +935,15 @@ function selectedApps() {
 // The installer is one prebuilt Crescent.exe; the app list (and the ticked scripts, in list
 // order) is appended to its end: <JSON><uint32 LE length>"AUTOINS1". The program reads that trailer
 // back when it runs.
+// The prebuilt program (installer-base.js, about 10 MB) loads after the page is drawn, so it never
+// holds the page up.
 let baseExe = null;
+function loadWinBase() {
+  if (window.CRESCENT_EXE_B64 || $("#winBase")) return;
+  const sc = document.createElement("script");
+  sc.id = "winBase"; sc.src = "installer-base.js"; sc.onload = update;
+  document.head.append(sc);
+}
 function loadBase() {
   if (!baseExe) {
     const b64 = window.CRESCENT_EXE_B64;
@@ -1386,7 +1395,7 @@ function hop() { const a = $(".art"); if (!a) return; a.classList.remove("hop");
 async function download() {
   if (plat === "mac") return downloadMac();
   let exe;
-  try { exe = buildExe(); } catch { toast(t("loadFail"), "err"); return; }
+  try { exe = buildExe(); } catch { toast(t(window.CRESCENT_EXE_B64 ? "loadFail" : "exeLoading"), "err"); loadWinBase(); return; }
   if (inViewer) {
     if (!downloads) { toast(t("noDownloads"), "err"); return; }
     try {
@@ -1510,7 +1519,7 @@ $("#instAgent").addEventListener("click", () => {
     try { a.href = URL.createObjectURL(buildMacApp(false)); } catch { toast(t("macLoading"), "err"); loadMacBase(); return; }
     a.download = "Crescent-agent.zip";
   } else {
-    a.href = URL.createObjectURL(new Blob([loadBase()], { type: "application/octet-stream" }));
+    try { a.href = URL.createObjectURL(new Blob([loadBase()], { type: "application/octet-stream" })); } catch { toast(t("exeLoading"), "err"); loadWinBase(); return; }
     a.download = "Crescent-agent.exe";
   }
   document.body.appendChild(a); a.click(); a.remove();
@@ -1636,7 +1645,7 @@ function setPlat(p) {
   const dropped = [...selected].filter(id => !avail(id));
   dropped.forEach(id => { selected.delete(id); byHand.delete(id); });
   if (cat !== "All" && cat !== "Selected" && !groups().some(g => g[0] === cat)) cat = "All";
-  if (plat === "mac") loadMacBase();
+  if (plat === "mac") loadMacBase(); else loadWinBase();
   applyLang();
   if (dropped.length) toast(t("dropped", dropped.length));
 }
@@ -1649,7 +1658,7 @@ $("#langSw").addEventListener("click", e => {
 });
 
 [...selected].filter(id => !avail(id)).forEach(id => { selected.delete(id); byHand.delete(id); });
-if (plat === "mac") loadMacBase();
 applyLang();
+if (plat === "mac") loadMacBase(); else loadWinBase();
 </script>
 <!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "a1874b4a92c443f8b1b560be1af5b3b8"}'></script><!-- End Cloudflare Web Analytics -->
