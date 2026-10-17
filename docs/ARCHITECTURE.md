@@ -173,6 +173,12 @@ winget install --id <ID> --exact --silent --disable-interactivity --source <wing
 Anything else is "failed", logged in hex. winget's output is cleaned (no ANSI codes, spinners or
 progress bars) and shown in the log.
 
+**Add-ons** (`addon.go`, graphify and Ponytail for Claude Code): IDs listed in `addons` run their
+own commands instead of winget or Homebrew, after the other apps and before maker downloads, with
+the Path a new window would get (so a Claude Code or uv installed a moment ago is found), from the
+user's home folder and with no console. A step marked `mayFail` (adding Ponytail's marketplace a
+second time, `uv tool update-shell`) doesn't fail the add-on. They are always `fixed`.
+
 **Maker downloads** (`direct.go`, today only Samsung Magician):
 
 1. If `detect` matches the start of a `DisplayName` under the Uninstall registry keys (HKLM 64-bit,

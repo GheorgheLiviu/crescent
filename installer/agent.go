@@ -36,7 +36,7 @@ func linkToken(link string) string {
 
 // agentVersion goes up with every change to the agent; the page (AGENT_VERSION in web/index.html)
 // sends a newer program to an older agent, which replaces itself for the next Install.
-const agentVersion = 6
+const agentVersion = 7
 
 // agentOrigins are the pages that may drive the agent.
 // The local page (setup.cmd) and the hosted site on Cloudflare Pages.

@@ -231,9 +231,10 @@ func cleanPayload(payload *Payload) (*Payload, []App, error) {
 // macInstaller is true in the Mac build, where an app's ID is its Homebrew package.
 var macInstaller = runtime.GOOS == "darwin"
 
-// cleanApps keeps only valid entries and moves apps that need the user's clicks to the end.
+// cleanApps keeps only valid entries, moves add-ons after the apps they need and apps that need
+// the user's clicks to the end.
 func cleanApps(list []App) []App {
-	var apps, direct []App
+	var apps, extras, direct []App
 	for _, a := range list {
 		var office []string
 		for _, o := range a.Office {
@@ -250,6 +251,14 @@ func cleanApps(list []App) []App {
 		}
 		if len(a.Detect) > 100 || strings.ContainsAny(a.Detect, "\\\x00") {
 			a.Detect = ""
+		}
+		if isAddon(a.ID) {
+			a.URL, a.Fixed = "", true
+			if a.Name == "" {
+				a.Name = a.ID
+			}
+			extras = append(extras, a)
+			continue
 		}
 		if macInstaller {
 			// Homebrew always installs to the usual place, and makers' Windows setups don't apply.
@@ -271,7 +280,7 @@ func cleanApps(list []App) []App {
 			apps = append(apps, a)
 		}
 	}
-	return append(apps, direct...)
+	return append(append(apps, extras...), direct...)
 }
 
 // installFolder matches a folder on a drive of this PC, such as D:\Program Files\Steam, without the
@@ -390,6 +399,10 @@ func (in *Installer) Run(apps []App, ui UI) Result {
 		}
 		ui.Progress(i, len(apps), fmt.Sprintf("Installing %s (%d of %d)", a.Name, i+1, len(apps)))
 		ui.Log(fmt.Sprintf("--- %s ---", a.Name))
+		if isAddon(a.ID) {
+			in.runAddon(i, a, ui, &r)
+			continue
+		}
 		if in.Brew != "" {
 			in.runBrew(i, a, ui, &r)
 			continue
