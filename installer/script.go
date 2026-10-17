@@ -123,12 +123,7 @@ func (in *Installer) RunScript(s *Script, ui UI) (note string, ok bool) {
 	}
 
 	cmd := scriptCommand(file, s.Kind)
-	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		cmd.Dir = home
-	} else {
-		cmd.Dir = os.TempDir()
-	}
-	cmd.Env = freshEnv()
+	cmd.Dir, cmd.Env = homeDir(), freshEnv()
 	var out *lineWriter
 	if !scriptOwnWindow {
 		out = &lineWriter{log: ui.Log}
@@ -188,6 +183,14 @@ var samePerUser = map[string]bool{"USERNAME": true, "USERDOMAIN": true, "USERPRO
 // then the machine and user variables over it (plain values before ones that refer to others,
 // as Windows does), with Path the machine Path followed by the user Path. So a script sees
 // what the apps just installed added, such as git or python on the Path. Names ignore case.
+// homeDir is the user's home folder, where scripts and add-ons run, or the temp folder without one.
+func homeDir() string {
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return home
+	}
+	return os.TempDir()
+}
+
 func mergeEnv(base []string, machine, user []envVar) []string {
 	env := newEnvSet(base)
 	var paths [2]*envVar

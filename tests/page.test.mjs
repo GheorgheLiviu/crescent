@@ -249,6 +249,32 @@ test("apps that can't change folder or need clicks are marked", async () => {
   await p.close();
 });
 
+test("graphify and Ponytail bring what they need and go after the apps, on Windows and Mac", async () => {
+  const p = await page();
+  await p.evaluate(() => { selected.clear(); update(); });
+  await tick(p, "Crescent.Ponytail");
+  assert.ok(await p.isChecked("#app-Anthropic\\.ClaudeCode"), "Claude Code is ticked with it");
+  assert.ok(await p.isChecked("#app-Git\\.Git"));
+  await tick(p, "Crescent.Graphify");
+  await tick(p, "Valve.Steam");
+  const apps = await p.evaluate(() => selectedApps());
+  assert.deepEqual(apps.map(a => a.id), ["Anthropic.ClaudeCode", "Git.Git", "astral-sh.uv", "Valve.Steam", "Crescent.Ponytail", "Crescent.Graphify"]);
+  assert.ok(apps.slice(-2).every(a => a.fixed));
+  await tick(p, "Git.Git");
+  assert.deepEqual(await ids(p), ["Anthropic.ClaudeCode", "astral-sh.uv", "Valve.Steam", "Crescent.Graphify"], "unticking a need takes its add-on away");
+  assert.equal(await count(p), 4);
+  await tick(p, "Git.Git");
+  await tick(p, "Crescent.Ponytail");
+  assert.match(await p.getAttribute('#catalog label[data-row="Crescent.Graphify"]', "title"), /Claude Code, uv/);
+  assert.doesNotMatch(await p.textContent("#notices"), /Ponytail|graphify/, "not listed as an app with a fixed folder");
+  await p.click('#platSw [data-plat="mac"]');
+  const mac = await p.evaluate(() => macPayload().apps.map(a => a.id));
+  assert.deepEqual(mac.slice(-2), ["Crescent.Graphify", "Crescent.Ponytail"]);
+  assert.ok(mac.includes("cask:claude-code") && mac.includes("formula:uv"));
+  assert.deepEqual(p.errors, []);
+  await p.close();
+});
+
 test("the installer is the base program plus the app list", async () => {
   const p = await page();
   const base = fs.readFileSync(path.join(ROOT, "installer", "Crescent-base.exe"));

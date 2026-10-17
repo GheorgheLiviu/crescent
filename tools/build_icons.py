@@ -58,6 +58,8 @@ ICONS = {
     "AgileBits.1Password": ("di", "1password"),
     "Anthropic.Claude": ("di", "claude-ai"),
     "Anthropic.ClaudeCode": ("si", "claudecode"),
+    "Crescent.Graphify": ("url", "https://avatars.githubusercontent.com/Graphify-Labs?size=128"),
+    "Crescent.Ponytail": ("url", "https://raw.githubusercontent.com/DietrichGebert/ponytail/main/assets/logo.png"),
     "OpenAI.Codex": ("di", "openai-light", "000000"),
     "Microsoft.VisualStudioCode": ("di", "visual-studio-code"),
     "Git.Git": ("di", "git"),

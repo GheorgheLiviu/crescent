@@ -22,6 +22,9 @@ HEADER = """// The apps the Crescent page offers. Edit this file to add, remove 
 //                  formula:name. Apps not listed here don't show on the Mac page.
 //                  An app with "macOnly": true has no Windows version and shows only on the Mac page.
 //   repos:         the source code link of each open-source app, shown as a small link on its row.
+//   addons:        add-ons for an app rather than apps (Claude Code's graphify and Ponytail). The
+//                  installer sets each one up for the user after the apps (installer/addon.go);
+//                  "needs" are ticked with it and can't be unticked without it.
 """
 
 
@@ -74,7 +77,7 @@ def catalog_ids(data):
     out, seen = [], set()
     for g in data["groups"]:
         for a in g["apps"]:
-            if a.get("macOnly"):
+            if a.get("macOnly") or a["id"] in data.get("addons", {}):
                 continue
             pkg = a["id"].split("/")[0]
             if pkg not in seen:

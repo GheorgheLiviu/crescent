@@ -558,7 +558,11 @@ const direct = id => plat === "win" && Object.hasOwn(DIRECT, id) ? DIRECT[id] : 
 // Apps whose setup ignores a chosen folder (built by tools/location_support.py from their winget
 // manifests). Store apps, Microsoft 365 and DIRECT apps always install to their usual place too.
 const FIXED_LOCATION = new Set(APPS.fixedLocation);
-const fixedPlace = id => FIXED_LOCATION.has(id) || /^[0-9A-Z]{12}$/.test(id) || !!direct(id);
+// Add-ons for an app (graphify and Ponytail for Claude Code): the installer sets them up for the
+// user after the apps, so they need no folder; the apps they need are ticked with them.
+const ADDONS = APPS.addons || {};
+const addon = id => Object.hasOwn(ADDONS, id) ? ADDONS[id] : null;
+const fixedPlace = id => FIXED_LOCATION.has(id) || /^[0-9A-Z]{12}$/.test(id) || !!direct(id) || !!addon(id);
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9.+_-]{1,99}$/;
 // The page builds a Windows .exe or a Mac app. The Mac page shows only the apps with a Homebrew
 // package (APPS.mac); there, "Add by ID" takes a Homebrew name.
@@ -572,7 +576,9 @@ let plat = (() => {
   try { const saved = localStorage.getItem("ai-platform"); if (saved === "win" || saved === "mac") return saved; } catch {}
   return /Mac/.test(navigator.platform || navigator.userAgent || "") ? "mac" : "win";
 })();
-const avail = id => plat === "win" ? !MAC_ONLY.has(id) : Object.hasOwn(MAC_PKG, id) || custom.includes(id);
+const avail = id => plat === "win" ? !MAC_ONLY.has(id) : Object.hasOwn(MAC_PKG, id) || !!addon(id) || custom.includes(id);
+// The apps an add-on needs, on this page's platform.
+const needsOf = id => (addon(id)?.needs || []).filter(avail);
 
 const names = new Map();
 CATALOG.forEach(([, apps]) => apps.forEach(([n, id]) => names.set(id, n)));
@@ -628,7 +634,7 @@ const enN = (n, one, many) => `${n.toLocaleString("en-US")} ${n === 1 ? one : ma
 const I18N = {
   en: {
     search: "Search apps", language: "Language", categories: "Categories",
-    platform: "Computer", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "The Mac installer is still loading. Try again in a moment.", exeLoading: "The installer is still loading. Try again in a moment.",
+    platform: "Computer", brewTip: "Homebrew: {0}", addonTip: "Add-on for Claude Code, set up for you after the apps. Also ticks {0}.", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "The Mac installer is still loading. Try again in a moment.", exeLoading: "The installer is still loading. Try again in a moment.",
     dropped: n => `${enN(n, "app has", "apps have")} no Mac version and left the selection.`,
     addByIdMac: "Add by Homebrew name", idExampleMac: "app-name", wingetIdMac: "Homebrew name",
     idHintMac: 'Find names on <a href="https://formulae.brew.sh" target="_blank" rel="noopener">formulae.brew.sh</a> or with <code>brew search</code>.',
@@ -734,7 +740,7 @@ const I18N = {
   },
   ro: {
     search: "Caută aplicații", language: "Limbă", categories: "Categorii",
-    platform: "Calculator", brewTip: "Homebrew: {0}", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "Instalatorul pentru Mac încă se încarcă. Încearcă din nou imediat.", exeLoading: "Instalatorul încă se încarcă. Încearcă din nou imediat.",
+    platform: "Calculator", brewTip: "Homebrew: {0}", addonTip: "Supliment pentru Claude Code, configurat pentru tine după aplicații. Bifează și {0}.", kindSh: "Shell", shLabel: "Shell (.sh)", macLoading: "Instalatorul pentru Mac încă se încarcă. Încearcă din nou imediat.", exeLoading: "Instalatorul încă se încarcă. Încearcă din nou imediat.",
     dropped: n => n === 1 ? "O aplicație nu are versiune de Mac și a fost scoasă din selecție." : `${roN(n, "aplicație", "aplicații")} nu au versiune de Mac și au fost scoase din selecție.`,
     addByIdMac: "Adaugă după numele Homebrew", idExampleMac: "nume-aplicatie", wingetIdMac: "Nume Homebrew",
     idHintMac: 'Găsești numele pe <a href="https://formulae.brew.sh" target="_blank" rel="noopener">formulae.brew.sh</a> sau cu <code>brew search</code>.',
@@ -895,7 +901,7 @@ function renderCatalog() {
     const list = apps.filter(([n, id]) => (!q || n.toLowerCase().includes(q) || appName(id, n).toLowerCase().includes(q) || id.toLowerCase().includes(q)) && (cat !== "Selected" || selected.has(id)));
     if (!list.length) continue;
     shown += list.length;
-    const tip = id => plat === "mac" ? t("brewTip", MAC_PKG[id] || id) : direct(id) ? t("downloadedFrom", direct(id).from) : t(/^[0-9A-Z]{12}$/.test(id) ? "storeIdTip" : "wingetIdTip", id.split("/")[0]);
+    const tip = id => addon(id) ? t("addonTip", needsOf(id).map(n => appName(n, names.get(n) || n)).join(", ")) : plat === "mac" ? t("brewTip", MAC_PKG[id] || id) : direct(id) ? t("downloadedFrom", direct(id).from) : t(/^[0-9A-Z]{12}$/.test(id) ? "storeIdTip" : "wingetIdTip", id.split("/")[0]);
     html += `<div class="grp" data-grp="${esc(c)}"><div class="grp-h"><h3>${esc(catName(c))}</h3><span class="ct"></span><button type="button" class="linkbtn" data-toggle-group></button></div><div class="rows">` +
       list.map(([n, id]) => `<label class="row" data-row="${esc(id)}" title="${esc(tip(id))}"><input class="cb" type="checkbox" id="app-${esc(id)}" data-id="${esc(id)}">${tile(n, id)}<span class="nm">${esc(appName(id, n))}</span>${repoOf(id) ? `<a class="repo" href="${esc(repoOf(id))}" target="_blank" rel="noopener" title="${esc(t("sourceCode", appName(id, n)))}" aria-label="${esc(t("sourceCode", appName(id, n)))}">${ICON_CODE}</a>` : ""}</label>`).join("") +
       `</div></div>`;
@@ -918,9 +924,11 @@ function syncRows() {
 
 // The Office apps (Word, Excel, ...) are parts of one Microsoft 365 install, so they collapse into a single entry.
 function selectedApps() {
-  if (plat === "mac") return [...selected].map(id => ({ id, name: names.get(id) || id, icon: ICONS[id] })); // the Office apps are apps of their own there
+  // Add-ons go after the other apps, like in the installer.
+  const sorted = [...selected].filter(id => !addon(id)).concat([...selected].filter(addon));
+  if (plat === "mac") return sorted.map(id => ({ id, name: names.get(id) || id, icon: ICONS[id] })); // the Office apps are apps of their own there
   const apps = [], office = [];
-  for (const id of selected) {
+  for (const id of sorted) {
     if (id.startsWith("Microsoft.Office/")) {
       if (!office.length) apps.push({ id: "Microsoft.Office", name: "", office, icon: ICONS["Microsoft.Office"], fixed: true });
       office.push(id.split("/")[1]);
@@ -1050,7 +1058,7 @@ function renderNotices() {
     if (has("EclipseAdoptium.") || has("Python.Python.")) items.push(["", t("cliT"), cli.join(" ")]);
     const manual = [...selected].filter(direct).map(id => names.get(id));
     if (manual.length) items.push(["", t("manualT", andList(manual, 4), manual.length), t("manualD", manual.length)]);
-    const fixed = [...new Set([...selected].filter(id => (fixedPlace(id) && !direct(id)) || id.startsWith("Microsoft.Office/")).map(id => id.startsWith("Microsoft.Office/") ? "Microsoft 365" : appName(id, names.get(id) || id)))];
+    const fixed = [...new Set([...selected].filter(id => (fixedPlace(id) && !direct(id) && !addon(id)) || id.startsWith("Microsoft.Office/")).map(id => id.startsWith("Microsoft.Office/") ? "Microsoft 365" : appName(id, names.get(id) || id)))];
     items.push(["", t("whereT"), t("whereD") + (fixed.length ? t("fixedNote", andList(fixed, 4), fixed.length) : "")]);
   }
   const sc = tickedScripts().map(s => s.name);
@@ -1062,6 +1070,8 @@ function renderNotices() {
 
 const b64Size = b64 => Math.round((b64 || "").length * 3 / 4);
 function update() {
+  // An add-on can't install without the apps it needs: taking one away takes the add-on away too.
+  [...selected].filter(id => needsOf(id).some(n => !selected.has(n))).forEach(id => { selected.delete(id); byHand.delete(id); });
   const baseSize = b64Size(plat === "mac" ? window.CRESCENT_MAC_B64 : window.CRESCENT_EXE_B64);
   renderPresets(); renderCats(); renderNotices(); syncRows();
   const n = selected.size, apps = selectedApps(), label = t("appWord", n);
@@ -1123,6 +1133,7 @@ $("#q").addEventListener("input", e => { query = e.target.value; renderCatalog()
 $("#catalog").addEventListener("change", e => {
   const id = e.target.dataset.id; if (!id) return;
   e.target.checked ? (selected.add(id), byHand.add(id)) : (selected.delete(id), byHand.delete(id));
+  if (e.target.checked) needsOf(id).forEach(n => { selected.add(n); byHand.add(n); });
   update();
 });
 $("#catalog").addEventListener("click", e => {
@@ -1440,7 +1451,7 @@ async function downloadMac() {
 // the plain program, "the agent"), which listens on 127.0.0.1. This page sends it the list and shows
 // the progress it reports. Without the agent nothing answers, and the page offers it for download.
 const AGENT = "http://127.0.0.1:47615";
-const AGENT_VERSION = 6; // agentVersion in installer/agent.go
+const AGENT_VERSION = 7; // agentVersion in installer/agent.go
 const inst = $("#instDlg");
 let instRun = null; // { token, phase: "wait" | "run" | "end" }
 const agentFetch = (path, body) => fetch(AGENT + path, {

@@ -13,6 +13,9 @@
 //                  formula:name. Apps not listed here don't show on the Mac page.
 //                  An app with "macOnly": true has no Windows version and shows only on the Mac page.
 //   repos:         the source code link of each open-source app, shown as a small link on its row.
+//   addons:        add-ons for an app rather than apps (Claude Code's graphify and Ponytail). The
+//                  installer sets each one up for the user after the apps (installer/addon.go);
+//                  "needs" are ticked with it and can't be unticked without it.
 window.CRESCENT_APPS = {
   "groups": [
     {"name": "Browsers", "ro": "Browsere", "apps": [
@@ -91,6 +94,8 @@ window.CRESCENT_APPS = {
     {"name": "AI assistants", "ro": "Asistenți AI", "apps": [
       {"name": "Claude", "id": "Anthropic.Claude"},
       {"name": "Claude Code", "id": "Anthropic.ClaudeCode"},
+      {"name": "graphify (for Claude Code)", "ro": "graphify (pentru Claude Code)", "id": "Crescent.Graphify"},
+      {"name": "Ponytail (for Claude Code)", "ro": "Ponytail (pentru Claude Code)", "id": "Crescent.Ponytail"},
       {"name": "Codex CLI", "id": "OpenAI.Codex"}
     ]},
     {"name": "Developer tools", "ro": "Unelte pentru programatori", "apps": [
@@ -383,6 +388,12 @@ window.CRESCENT_APPS = {
     "Oven-sh.Bun": "https://github.com/oven-sh/bun",
     "DenoLand.Deno": "https://github.com/denoland/deno",
     "Chocolatey.Chocolatey": "https://github.com/chocolatey/choco",
-    "Devolutions.UniGetUI": "https://github.com/Devolutions/UniGetUI"
+    "Devolutions.UniGetUI": "https://github.com/Devolutions/UniGetUI",
+    "Crescent.Graphify": "https://github.com/Graphify-Labs/graphify",
+    "Crescent.Ponytail": "https://github.com/DietrichGebert/ponytail"
+  },
+  "addons": {
+    "Crescent.Graphify": {"needs": ["Anthropic.ClaudeCode", "astral-sh.uv"]},
+    "Crescent.Ponytail": {"needs": ["Anthropic.ClaudeCode", "Git.Git"]}
   }
 };
